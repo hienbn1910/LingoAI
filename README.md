@@ -10,7 +10,7 @@ Frontend nằm trong `client/`. Backend nằm trực tiếp ở thư mục gốc
 - Tự động phát hiện ngôn ngữ nguồn bằng Gemini.
 - Dịch văn bản, hiển thị và sao chép kết quả.
 - Xử lý lỗi API và trạng thái đang dịch.
-- Luồng tự động dịch đã được hướng dẫn triển khai: chờ khoảng 800 ms sau khi ngừng nhập (debounce) rồi gửi yêu cầu. Thành viên cần dùng branch đã có thay đổi này; phiên bản trước sử dụng nút Dịch.
+
 
 MongoDB, lịch sử dịch, OCR, giọng nói và dịch tài liệu PDF/DOCX chưa thuộc phần cài đặt hiện tại. Thành viên chưa cần cài database để chạy chức năng dịch văn bản.
 

@@ -1,0 +1,25 @@
+{
+  "name": "ai-translator",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "concurrently --kill-others \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "node --watch --env-file=.env src/server.js",
+    "dev:client": "npm run dev --prefix client",
+    "start": "node --env-file=.env src/server.js",
+    "build": "npm run build --prefix client"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "express": "^5.2.1",
+    "openai": "^7.15.0"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.5"
+  }
+}

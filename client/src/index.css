@@ -1,0 +1,161 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+button,
+select,
+textarea {
+  font: inherit;
+}
+
+.translator {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 48px 20px;
+}
+
+.page-header {
+  margin-bottom: 28px;
+}
+
+.page-header h1 {
+  margin: 0 0 10px;
+}
+
+.page-header p {
+  color: #475569;
+}
+
+.translation-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.translation-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 22px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+}
+
+.language-select {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+label {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+select,
+textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: white;
+  color: #0f172a;
+}
+
+textarea {
+  min-height: 280px;
+  resize: vertical;
+  line-height: 1.6;
+}
+
+textarea[readonly] {
+  background: #f8fafc;
+}
+
+select:focus-visible,
+textarea:focus-visible,
+button:focus-visible {
+  outline: 3px solid #93c5fd;
+  outline-offset: 2px;
+}
+
+.panel-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  color: #64748b;
+  font-size: 14px;
+}
+
+button {
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.button-primary {
+  padding: 13px 32px;
+  background: #2563eb;
+  color: white;
+  font-weight: 600;
+}
+
+.button-secondary {
+  padding: 8px 14px;
+  background: #f1f5f9;
+  color: #334155;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.development-note {
+  margin: 0;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.feedback {
+  padding: 14px;
+  border-radius: 8px;
+  line-height: 1.5;
+}
+
+.error {
+  color: #991b1b;
+  background: #fef2f2;
+}
+
+.success {
+  color: #166534;
+  background: #f0fdf4;
+}
+
+@media (max-width: 700px) {
+  .translation-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .translator {
+    padding: 28px 16px;
+  }
+}

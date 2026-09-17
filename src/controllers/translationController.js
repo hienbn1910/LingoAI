@@ -51,16 +51,6 @@ export async function createTranslation(req, res) {
     });
   }
 
-  // return res.status(200).json({
-  //   success: true,
-  //   message:
-  //     "Backend đã nhận dữ liệu hợp lệ. Chưa thực hiện dịch vì chưa tích hợp LLM.",
-  //   data: {
-  //     text,
-  //     sourceLanguage,
-  //     targetLanguage,
-  //   },
-  // });
     try {
       const result = await translateWithAI({
         text,

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import LanguageSelect from "../components/LanguageSelect";
 import { languages, MAX_TEXT_LENGTH } from "../constants/languages";
 import { submitTranslation } from "../services/translationApi";
@@ -21,42 +21,72 @@ function TranslatorPage() {
     setDetectedLanguage("");
   }
 
-  async function handleSubmit(event) {
-    event.preventDefault();
-    clearFeedback();
+  useEffect(() => {
+    const controller = new AbortController();
+    let active = true;
+
+    setError("");
+    setMessage("");
+    setTranslatedText("");
+    setDetectedLanguage("");
+    setLoading(false);
 
     if (!text.trim()) {
-      setError("Vui lòng nhập văn bản cần dịch.");
+      return;
+    }
+
+    if (text.length > MAX_TEXT_LENGTH) {
+      setError(`Văn bản không được vượt quá ${MAX_TEXT_LENGTH} ký tự.`);
       return;
     }
 
     if (sourceLanguage === targetLanguage) {
-      setError("Vui lòng chọn ngôn ngữ đích khác ngôn ngữ nguồn.");
+      setTranslatedText(text);
+      setDetectedLanguage(sourceLanguage);
       return;
     }
 
-    setLoading(true);
+    const timer = setTimeout(async () => {
+      setLoading(true);
 
-    try {
-      const result = await submitTranslation({
-        text,
-        sourceLanguage,
-        targetLanguage,
-      });
+      try {
+        const result = await submitTranslation(
+          {
+            text,
+            sourceLanguage,
+            targetLanguage,
+          },
+          {
+            signal: controller.signal,
+          },
+        );
 
-      setTranslatedText(result.data.translatedText);
-      setDetectedLanguage(result.data.detectedLanguage);
-      setMessage(result.message);
-    } catch (error) {
-      setError(
-        error instanceof TypeError
-          ? "Không thể kết nối máy chủ. Vui lòng thử lại."
-          : error.message,
-      );
-    } finally {
-      setLoading(false);
-    }
-  }
+        if (!active) return;
+
+        setTranslatedText(result.data.translatedText);
+        setDetectedLanguage(result.data.detectedLanguage);
+      } catch (error) {
+        if (!active || error.name === "AbortError") return;
+
+        setError(
+          error instanceof TypeError
+            ? "Không thể kết nối máy chủ. Vui lòng thử lại."
+            : error.message,
+        );
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    }, 100);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [text, sourceLanguage, targetLanguage]);
+
   async function handleCopy() {
     setError("");
     setMessage("");
@@ -66,7 +96,7 @@ function TranslatorPage() {
       setMessage("Đã sao chép bản dịch.");
     } catch {
       setError(
-        "Không thể sao chép tự động. Bạn có thể chọn bản dịch và nhấn Ctrl + C.",
+        "Lỗi khi sao chép!",
       );
     }
   }
@@ -88,7 +118,7 @@ function TranslatorPage() {
           <p>Dịch văn bản đa ngôn ngữ với sự hỗ trợ của AI.</p>
         </header>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={(event) => event.preventDefault()}>
           <div className="translation-grid">
             <section className="translation-panel">
               <LanguageSelect
@@ -114,7 +144,6 @@ function TranslatorPage() {
                 }}
                 maxLength={MAX_TEXT_LENGTH}
                 placeholder="Nhập hoặc dán văn bản vào đây..."
-                disabled={loading}
                 aria-describedby="text-count"
               />
 
@@ -126,7 +155,7 @@ function TranslatorPage() {
                 <button
                   type="button"
                   className="button-secondary"
-                  disabled={loading || !text}
+                  disabled={!text}
                   onClick={() => {
                     setText("");
                     clearFeedback();
@@ -195,11 +224,9 @@ function TranslatorPage() {
             </p>
           )}
 
-          <div className="form-actions">
-            <button type="submit" className="button-primary" disabled={loading}>
-              {loading ? "Đang gửi..." : "Dịch"}
-            </button>
-          </div>
+          <p className="development-note" role="status">
+            {loading}
+          </p>
         </form>
       </main>
     </div>

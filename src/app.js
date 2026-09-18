@@ -1,8 +1,11 @@
 import express from "express";
 import translationRoutes from "./routes/translationRoutes.js";
+import cors from "cors"; // <--- 1. Thêm import cors ở đây
+import ocrRoutes from "./routes/ocrRoutes.js"; // <-- Thêm import route OCR
 
 const app = express();
 
+app.use(cors()); // <--- 2. Kích hoạt cors middleware cho phép mọi nguồn gọi vào
 app.use(express.json({ limit: "100kb" }));
 
 app.get("/api/health", (req, res) => {
@@ -13,6 +16,7 @@ app.get("/api/health", (req, res) => {
 });
 
 app.use("/api/translations", translationRoutes);
+app.use("/api/ocr", ocrRoutes); // <-- Đăng ký route /api/ocr tại đây
 
 // Đặt sau tất cả các route hợp lệ.
 app.use((req, res) => {

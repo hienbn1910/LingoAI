@@ -1,5 +1,6 @@
 import { useState } from "react";
 import LanguageSelect from "../components/LanguageSelect";
+import ImageTranslator from "../components/ImageTranslator"; // Đã thêm import component dịch ảnh
 import { languages, MAX_TEXT_LENGTH } from "../constants/languages";
 import { submitTranslation } from "../services/translationApi";
 
@@ -9,6 +10,11 @@ function TranslatorPage() {
   const [targetLanguage, setTargetLanguage] = useState("en");
   const [translatedText, setTranslatedText] = useState("");
   const [detectedLanguage, setDetectedLanguage] = useState("");
+
+  // --- THÊM STATE QUẢN LÝ CHẾ ĐỘ VÀ LƯU ẢNH ---
+  const [translateMode, setTranslateMode] = useState("text"); // 'text' hoặc 'image'
+  const [selectedImage, setSelectedImage] = useState(null); // Lưu file ảnh được chọn
+  // -------------------------------------------
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -25,10 +31,17 @@ function TranslatorPage() {
     event.preventDefault();
     clearFeedback();
 
-    if (!text.trim()) {
+    // --- CẬP NHẬT KIỂM TRA ĐẦU VÀO THEO CHẾ ĐỘ ---
+    if (translateMode === "text" && !text.trim()) {
       setError("Vui lòng nhập văn bản cần dịch.");
       return;
     }
+
+    if (translateMode === "image" && !selectedImage) {
+      setError("Vui lòng chọn hoặc tải lên một hình ảnh.");
+      return;
+    }
+    // -------------------------------------------
 
     if (sourceLanguage === targetLanguage) {
       setError("Vui lòng chọn ngôn ngữ đích khác ngôn ngữ nguồn.");
@@ -38,6 +51,7 @@ function TranslatorPage() {
     setLoading(true);
 
     try {
+      // (Phần gọi API dịch văn bản giữ nguyên, sau này API OCR ảnh sẽ nối tiếp vào đây)
       const result = await submitTranslation({
         text,
         sourceLanguage,
@@ -57,6 +71,7 @@ function TranslatorPage() {
       setLoading(false);
     }
   }
+
   async function handleCopy() {
     setError("");
     setMessage("");
@@ -88,6 +103,30 @@ function TranslatorPage() {
           <p>Dịch văn bản đa ngôn ngữ với sự hỗ trợ của AI.</p>
         </header>
 
+        {/* 1. Thanh chuyển đổi chế độ */}
+        <div className="flex gap-6 mb-4 border-b border-gray-200 pb-2 px-2">
+          <button
+            type="button"
+            onClick={() => {
+              setTranslateMode("text");
+              clearFeedback();
+            }}
+            className={`font-semibold pb-1 transition cursor-pointer ${translateMode === "text" ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-500 hover:text-gray-700"}`}
+          >
+            Văn bản
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setTranslateMode("image");
+              clearFeedback();
+            }}
+            className={`font-semibold pb-1 transition cursor-pointer ${translateMode === "image" ? "text-blue-600 border-b-2 border-blue-600" : "text-gray-500 hover:text-gray-700"}`}
+          >
+            Hình ảnh
+          </button>
+        </div>
+
         <form onSubmit={handleSubmit}>
           <div className="translation-grid">
             <section className="translation-panel">
@@ -103,38 +142,57 @@ function TranslatorPage() {
                 disabled={loading}
               />
 
-              <label htmlFor="source-text">Văn bản cần dịch</label>
+              {/* --- DÙNG ĐIỀU KIỆN ĐỂ CHUYỂN ĐỔI GIAO DIỆN CỘT TRÁI --- */}
+              {translateMode === "text" ? (
+                <>
+                  <label htmlFor="source-text">Văn bản cần dịch</label>
+                  <textarea
+                    id="source-text"
+                    value={text}
+                    onChange={(event) => {
+                      setText(event.target.value);
+                      clearFeedback();
+                    }}
+                    maxLength={MAX_TEXT_LENGTH}
+                    placeholder="Nhập hoặc dán văn bản vào đây..."
+                    disabled={loading}
+                    aria-describedby="text-count"
+                  />
 
-              <textarea
-                id="source-text"
-                value={text}
-                onChange={(event) => {
-                  setText(event.target.value);
-                  clearFeedback();
-                }}
-                maxLength={MAX_TEXT_LENGTH}
-                placeholder="Nhập hoặc dán văn bản vào đây..."
-                disabled={loading}
-                aria-describedby="text-count"
-              />
+                  <div className="panel-footer">
+                    <span id="text-count">
+                      {text.length}/{MAX_TEXT_LENGTH} ký tự
+                    </span>
 
-              <div className="panel-footer">
-                <span id="text-count">
-                  {text.length}/{MAX_TEXT_LENGTH} ký tự
-                </span>
-
-                <button
-                  type="button"
-                  className="button-secondary"
-                  disabled={loading || !text}
-                  onClick={() => {
-                    setText("");
+                    <button
+                      type="button"
+                      className="button-secondary"
+                      disabled={loading || !text}
+                      onClick={() => {
+                        setText("");
+                        clearFeedback();
+                      }}
+                    >
+                      Xóa
+                    </button>
+                  </div>
+                </>
+              ) : (
+                /* GỌI COMPONENT DỊCH ẢNH VÀO ĐÂY */
+                <ImageTranslator
+                  selectedImage={selectedImage}
+                  onImageSelect={(file) => {
+                    setSelectedImage(file);
+                    clearFeedback();
+                    setMessage(`Đã chọn tệp: ${file.name}`);
+                  }}
+                  onClearImage={() => {
+                    setSelectedImage(null);
                     clearFeedback();
                   }}
-                >
-                  Xóa
-                </button>
-              </div>
+                />
+              )}
+              {/* ---------------------------------------------------- */}
             </section>
 
             <section className="translation-panel">

@@ -1,6 +1,11 @@
 import { useState } from "react";
 
-function ImageTranslator({ selectedImage, onImageSelect, onClearImage }) {
+function ImageTranslator({
+  selectedImage,
+  onImageSelect,
+  onClearImage,
+  onPasteClipboard,
+}) {
   const [localError, setLocalError] = useState("");
 
   function handleFileChange(e) {
@@ -15,50 +20,30 @@ function ImageTranslator({ selectedImage, onImageSelect, onClearImage }) {
     }
   }
 
-  // Xử lý sự kiện dán ảnh trực tiếp từ bàn phím (Ctrl + V) không cần xin quyền trình duyệt
-  function handlePaste(e) {
-    const items = e.clipboardData?.items;
-    if (!items) return;
-
-    for (const item of items) {
-      if (item.type.startsWith("image/")) {
-        const file = item.getAsFile();
-        if (file) {
-          setLocalError("");
-          onImageSelect(file);
-          break;
-        }
-      }
-    }
-  }
-
   return (
-    <div
-      className="mt-2 flex flex-col gap-2 outline-none focus:ring-2 focus:ring-blue-400 rounded-lg p-1"
-      tabIndex={0} // Giúp thẻ div có thể nhận focus để bắt sự kiện Ctrl + V trực tiếp
-      onPaste={handlePaste}
-    >
+    <div className="mt-2 flex flex-col gap-2">
       <label className="block text-xs font-semibold text-gray-600 uppercase">
-        Văn bản từ hình ảnh (Có thể nhấn{" "}
-        <kbd className="bg-gray-100 px-1 py-0.5 rounded border text-[10px]">
-          Ctrl + V
-        </kbd>{" "}
-        để dán ảnh)
+        Văn bản từ hình ảnh
       </label>
 
-      {/* Input ẩn để gọi khi bấm nút Duyệt tệp */}
+      {/* Input tệp đã được ẩn hoàn toàn bằng display: none */}
       <input
         type="file"
         id="image-file-input"
         className="hidden"
+        style={{ display: "none" }}
         accept=".jpg, .jpeg, .png, .webp"
         onChange={handleFileChange}
       />
 
-      {/* Hiển thị Khung Preview nếu đã chọn ảnh, ngược lại hiển thị Dropzone */}
+      {/* Khung hiển thị ảnh preview hoặc vùng thả ảnh */}
       {selectedImage ? (
         <div className="image-preview-container relative">
-          <img src={URL.createObjectURL(selectedImage)} alt="Preview" />
+          <img
+            src={URL.createObjectURL(selectedImage)}
+            alt="Preview"
+            className="max-h-64 mx-auto rounded object-contain"
+          />
           <button
             type="button"
             onClick={onClearImage}
@@ -114,20 +99,24 @@ function ImageTranslator({ selectedImage, onImageSelect, onClearImage }) {
             </svg>
           </div>
           <span className="text-sm font-medium text-gray-700 mb-3">
-            Kéo thả ảnh, chọn tệp hoặc click vào đây rồi bấm{" "}
-            <kbd className="bg-gray-100 px-1.5 py-0.5 rounded border text-xs">
-              Ctrl + V
-            </kbd>
+            Kéo và thả hoặc chọn tệp ảnh
           </span>
-          <div className="flex gap-2 w-full max-w-xs justify-center">
+          <div className="flex gap-2 w-full max-w-xs">
             <button
               type="button"
               onClick={() =>
-                document.getElementById("image-file-input").click()
+                document.getElementById("image-file-input")?.click()
               }
-              className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-2 px-4 rounded transition cursor-pointer"
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-2 px-3 rounded transition cursor-pointer"
             >
               Duyệt tệp
+            </button>
+            <button
+              type="button"
+              onClick={onPasteClipboard}
+              className="flex-1 border border-gray-300 hover:bg-gray-50 text-gray-700 text-xs font-semibold py-2 px-3 rounded transition cursor-pointer"
+            >
+              Dán từ bộ nhớ tạm
             </button>
           </div>
         </div>

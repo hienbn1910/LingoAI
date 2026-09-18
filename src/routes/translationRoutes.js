@@ -1,8 +1,29 @@
 import { Router } from "express";
-import { createTranslation } from "../controllers/translationController.js";
+import multer from "multer";
+import {
+  createTranslation,
+  createDocumentTranslation,
+} from "../controllers/translationController.js";
 
 const router = Router();
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 20 * 1024 * 1024,
+  },
+  fileFilter: (_req, file, callback) => {
+    const name = file.originalname.toLowerCase();
+    const allowed = name.endsWith(".docx") || name.endsWith(".pdf");
+
+    if (!allowed) {
+      return callback(new Error("Chỉ hỗ trợ file DOCX và PDF."));
+    }
+
+    callback(null, true);
+  },
+});
 
 router.post("/", createTranslation);
+router.post("/document", upload.single("file"), createDocumentTranslation);
 
 export default router;

@@ -228,7 +228,7 @@ function TranslatorPage() {
           setLoading(false);
         }
       }
-    }, 100);
+    }, 1500);
 
     return () => {
       active = false;

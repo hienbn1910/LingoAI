@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import LanguageSelect from "../components/LanguageSelect";
 import { languages, MAX_TEXT_LENGTH } from "../constants/languages";
 import { submitTranslation } from "../services/translationApi";
+import { useSpeech } from "../hooks/useSpeech";
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024;
 
@@ -49,6 +50,15 @@ function TranslatorPage() {
     setDetectedLanguage("");
   }
 
+  const handleSpeechResult = useCallback((spokenText) => {
+    setText(spokenText);
+    clearFeedback();
+  }, []);
+
+  const { isListening, isSpeaking, toggleListening, speak } = useSpeech({
+    onTranscript: handleSpeechResult,
+    sourceLanguage: sourceLanguage,
+  });
   function validateDocument(file) {
     if (!file) return false;
 
@@ -171,6 +181,7 @@ function TranslatorPage() {
     }
   }
 
+
   useEffect(() => {
     const controller = new AbortController();
     let active = true;
@@ -228,7 +239,9 @@ function TranslatorPage() {
           setLoading(false);
         }
       }
-    }, 1500);
+
+    }, 100);
+
 
     return () => {
       active = false;
@@ -266,6 +279,7 @@ function TranslatorPage() {
           <h1>AI Translator</h1>
           <p>Dịch văn bản đa ngôn ngữ với sự hỗ trợ của AI.</p>
         </header>
+
 
         <section className="document-upload-section">
           <button
@@ -412,12 +426,7 @@ function TranslatorPage() {
           )}
         </section>
 
-        {message && (
-          <p className="feedback success" role="status">
-            {message}
-          </p>
-        )}
-
+      
         <form onSubmit={(event) => event.preventDefault()}>
           <div className="translation-grid">
             <section className="translation-panel">
@@ -455,6 +464,17 @@ function TranslatorPage() {
                 <button
                   type="button"
                   className="button-secondary"
+
+                  onClick={toggleListening}
+                  title="Nói qua micro"
+                >
+                  {isListening ? "🔴 Đang nghe..." : "🎤 Nói"}
+                </button>
+
+                <button
+                  type="button"
+                  className="button-secondary"
+
                   disabled={!text}
                   onClick={() => {
                     setText("");
@@ -488,6 +508,16 @@ function TranslatorPage() {
               />
 
               <div className="panel-footer">
+                <button
+                  type="button"
+                  className="button-secondary"
+                  onClick={() => speak(translatedText, targetLanguage)}
+                  disabled={loading || !translatedText || isSpeaking}
+                  title="Nghe phát âm"
+                >
+                  {isSpeaking ? "🔊 Đang đọc..." : "🔊 Nghe"}
+                </button>
+
                 <button
                   type="button"
                   className="button-secondary"

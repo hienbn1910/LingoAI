@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import LanguageSelect from "../components/LanguageSelect";
 import { languages, MAX_TEXT_LENGTH } from "../constants/languages";
 import { submitTranslation } from "../services/translationApi";
+import { useSpeech } from "../hooks/useSpeech";
 
 function TranslatorPage() {
   const [text, setText] = useState("");
@@ -20,6 +21,138 @@ function TranslatorPage() {
     setTranslatedText("");
     setDetectedLanguage("");
   }
+
+  const handleSpeechResult = useCallback((spokenText) => {
+    setText(spokenText);
+    clearFeedback();
+  }, []);
+
+  const { isListening, isSpeaking, toggleListening, speak } = useSpeech({
+    onTranscript: handleSpeechResult,
+    sourceLanguage: sourceLanguage,
+  });
+  function validateDocument(file) {
+    if (!file) return false;
+
+    const extension = file.name.split(".").pop()?.toLowerCase();
+    const validType = extension === "docx" || extension === "pdf";
+
+    if (!validType) {
+      setError("Tệp không hợp lệ. Chỉ hỗ trợ định dạng DOCX hoặc PDF.");
+      return false;
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      setError(`Tệp vượt quá dung lượng cho phép (${MAX_FILE_SIZE / (1024 * 1024)}MB).`);
+      return false;
+    }
+
+    return true;
+  }
+
+  function handleDocumentSelect(file) {
+    if (!file || !validateDocument(file)) {
+      return;
+    }
+
+    setSelectedFile(file);
+    setUploaded(false);
+    setDocumentTranslating(false);
+    setDocumentTranslated(false);
+    setDocumentTranslationResult("");
+    setUploadProgress(0);
+    setUploading(true);
+    setError("");
+    setMessage("");
+
+    let progress = 0;
+    const timer = setInterval(() => {
+      progress += 18;
+
+      if (progress >= 100) {
+        clearInterval(timer);
+        setUploadProgress(100);
+        setUploading(false);
+        setUploaded(true);
+        setMessage("Tải lên tài liệu thành công. Bạn có thể bắt đầu dịch.");
+        return;
+      }
+
+      setUploadProgress(progress);
+    }, 180);
+
+    return () => clearInterval(timer);
+  }
+
+  function handleFileChange(event) {
+    const file = event.target.files?.[0];
+    handleDocumentSelect(file);
+    event.target.value = "";
+  }
+
+  function handleFileDrop(event) {
+    event.preventDefault();
+    setDragOver(false);
+    const file = event.dataTransfer.files?.[0];
+    handleDocumentSelect(file);
+  }
+
+  function handleRemoveFile(event) {
+    event.stopPropagation();
+    setSelectedFile(null);
+    setUploadProgress(0);
+    setUploading(false);
+    setUploaded(false);
+    setDocumentTranslating(false);
+    setDocumentTranslated(false);
+    setDocumentTranslationResult("");
+    setError("");
+    setMessage("");
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }
+
+  async function handleStartDocumentTranslation() {
+    if (!selectedFile || !uploaded || documentTranslating) {
+      return;
+    }
+
+    setDocumentTranslating(true);
+    setDocumentTranslated(false);
+    setDocumentTranslationResult("");
+    setError("");
+    setMessage("Đang dịch tài liệu, vui lòng chờ...");
+
+    try {
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+      formData.append("sourceLanguage", sourceLanguage);
+      formData.append("targetLanguage", documentTargetLanguage || targetLanguage);
+
+      const response = await fetch("/api/translations/document", {
+        method: "POST",
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || "Không thể dịch tài liệu.");
+      }
+
+      setDocumentTranslating(false);
+      setDocumentTranslated(true);
+      setDocumentTranslationResult(result.data.translatedText || "");
+      setMessage(`Tài liệu "${selectedFile.name}" đã được dịch thành công.`);
+    } catch (error) {
+      setDocumentTranslating(false);
+      setError(error.message || "Không thể dịch tài liệu.");
+      setMessage("");
+    }
+  }
+
 
   useEffect(() => {
     const controller = new AbortController();
@@ -78,7 +211,9 @@ function TranslatorPage() {
           setLoading(false);
         }
       }
-    }, 1500);
+
+    }, 100);
+
 
     return () => {
       active = false;
@@ -152,6 +287,17 @@ function TranslatorPage() {
                 <button
                   type="button"
                   className="button-secondary"
+
+                  onClick={toggleListening}
+                  title="Nói qua micro"
+                >
+                  {isListening ? "🔴 Đang nghe..." : "🎤 Nói"}
+                </button>
+
+                <button
+                  type="button"
+                  className="button-secondary"
+
                   disabled={!text}
                   onClick={() => {
                     setText("");
@@ -185,6 +331,16 @@ function TranslatorPage() {
               />
 
               <div className="panel-footer">
+                <button
+                  type="button"
+                  className="button-secondary"
+                  onClick={() => speak(translatedText, targetLanguage)}
+                  disabled={loading || !translatedText || isSpeaking}
+                  title="Nghe phát âm"
+                >
+                  {isSpeaking ? "🔊 Đang đọc..." : "🔊 Nghe"}
+                </button>
+
                 <button
                   type="button"
                   className="button-secondary"

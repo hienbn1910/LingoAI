@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 
 function ImageTranslator({
   selectedImage,
@@ -7,17 +7,46 @@ function ImageTranslator({
   onPasteClipboard,
 }) {
   const [localError, setLocalError] = useState("");
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef(null);
+
+  function validateAndSelectFile(file) {
+    if (!file) return;
+
+    const validTypes = ["image/jpeg", "image/png", "image/webp"];
+    if (!validTypes.includes(file.type)) {
+      setLocalError("Chỉ hỗ trợ định dạng: .jpg, .jpeg, .png, .webp.");
+      return;
+    }
+
+    setLocalError("");
+    onImageSelect(file);
+  }
 
   function handleFileChange(e) {
-    const file = e.target.files[0];
-    if (file) {
-      if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-        setLocalError("Chỉ hỗ trợ định dạng: .jpg, .jpeg, .png, .webp.");
-        return;
-      }
-      setLocalError("");
-      onImageSelect(file);
-    }
+    const file = e.target.files?.[0];
+    validateAndSelectFile(file);
+  }
+
+  function handleDragOver(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  }
+
+  function handleDragLeave(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  }
+
+  function handleDrop(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const file = e.dataTransfer.files?.[0];
+    validateAndSelectFile(file);
   }
 
   return (
@@ -26,17 +55,16 @@ function ImageTranslator({
         Văn bản từ hình ảnh
       </label>
 
-      {/* Input tệp đã được ẩn hoàn toàn bằng display: none */}
       <input
         type="file"
         id="image-file-input"
+        ref={fileInputRef}
         className="hidden"
         style={{ display: "none" }}
         accept=".jpg, .jpeg, .png, .webp"
         onChange={handleFileChange}
       />
 
-      {/* Khung hiển thị ảnh preview hoặc vùng thả ảnh */}
       {selectedImage ? (
         <div className="image-preview-container relative">
           <img
@@ -67,21 +95,15 @@ function ImageTranslator({
         </div>
       ) : (
         <div
-          className="image-dropzone"
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={(e) => {
-            e.preventDefault();
-            const file = e.dataTransfer.files[0];
-            if (
-              file &&
-              ["image/jpeg", "image/png", "image/webp"].includes(file.type)
-            ) {
-              setLocalError("");
-              onImageSelect(file);
-            } else {
-              setLocalError("Vui lòng thả tệp ảnh hợp lệ (.jpg, .png, .webp).");
-            }
-          }}
+          className={`image-dropzone transition-all duration-200 cursor-pointer ${
+            isDragging
+              ? "border-2 border-dashed border-blue-500 bg-blue-50"
+              : ""
+          }`}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={() => fileInputRef.current?.click()}
         >
           <div className="text-blue-500 mb-2">
             <svg
@@ -99,21 +121,27 @@ function ImageTranslator({
             </svg>
           </div>
           <span className="text-sm font-medium text-gray-700 mb-3">
-            Kéo và thả hoặc chọn tệp ảnh
+            {isDragging
+              ? "Thả tệp ảnh vào đây..."
+              : "Kéo và thả hoặc chọn tệp ảnh"}
           </span>
           <div className="flex gap-2 w-full max-w-xs">
             <button
               type="button"
-              onClick={() =>
-                document.getElementById("image-file-input")?.click()
-              }
+              onClick={(e) => {
+                e.stopPropagation();
+                fileInputRef.current?.click();
+              }}
               className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-2 px-3 rounded transition cursor-pointer"
             >
               Duyệt tệp
             </button>
             <button
               type="button"
-              onClick={onPasteClipboard}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onPasteClipboard) onPasteClipboard();
+              }}
               className="flex-1 border border-gray-300 hover:bg-gray-50 text-gray-700 text-xs font-semibold py-2 px-3 rounded transition cursor-pointer"
             >
               Dán từ bộ nhớ tạm

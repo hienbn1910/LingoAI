@@ -1,5 +1,13 @@
 import multer from "multer";
 import { createWorker } from "tesseract.js";
+import TranslationHistory from "../models/TranslationHistory.js";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+import { v4 as uuidv4 } from "uuid";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -38,6 +46,20 @@ export async function handleOCR(req, res, next) {
         message: "Không tìm thấy văn bản nào trong hình ảnh này.",
       });
     }
+
+    const extension = path.extname(req.file.originalname);
+    const fileName = `${uuidv4()}${extension}`;
+    const relativeFilePath = `src/uploads/${fileName}`;
+    const fullPath = path.join(__dirname, "../../", relativeFilePath);
+    fs.writeFileSync(fullPath, req.file.buffer);
+
+    await TranslationHistory.create({
+      originalText: cleanedText,
+      sourceLanguage: "auto",
+      type: "image",
+      filePath: relativeFilePath,
+      fileName: req.file.originalname,
+    });
 
     return res.status(200).json({
       success: true,

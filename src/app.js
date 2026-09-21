@@ -1,12 +1,19 @@
 import express from "express";
+import path from "path";
+import { fileURLToPath } from "url";
 import translationRoutes from "./routes/translationRoutes.js";
 import cors from "cors"; // <--- 1. Thêm import cors ở đây
 import ocrRoutes from "./routes/ocrRoutes.js"; // <-- Thêm import route OCR
+import historyRoutes from "./routes/historyRoutes.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 
 app.use(cors()); // <--- 2. Kích hoạt cors middleware cho phép mọi nguồn gọi vào
 app.use(express.json({ limit: "100kb" }));
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 app.get("/api/health", (req, res) => {
   res.status(200).json({
@@ -17,6 +24,7 @@ app.get("/api/health", (req, res) => {
 
 app.use("/api/translations", translationRoutes);
 app.use("/api/ocr", ocrRoutes); // <-- Đăng ký route /api/ocr tại đây
+app.use("/api/history", historyRoutes);
 
 // Đặt sau tất cả các route hợp lệ.
 app.use((req, res) => {

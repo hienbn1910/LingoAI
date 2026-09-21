@@ -1,42 +1,15 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import LanguageSelect from "../components/LanguageSelect";
 import { languages, MAX_TEXT_LENGTH } from "../constants/languages";
 import { submitTranslation } from "../services/translationApi";
-
-const MAX_FILE_SIZE = 20 * 1024 * 1024;
-
-function formatFileSize(bytes) {
-  if (!bytes) return "0 KB";
-
-  const units = ["B", "KB", "MB", "GB"];
-  let value = bytes;
-  let unitIndex = 0;
-
-  while (value >= 1024 && unitIndex < units.length - 1) {
-    value /= 1024;
-    unitIndex += 1;
-  }
-
-  return `${value.toFixed(value >= 10 || unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
-}
+import { useSpeech } from "../hooks/useSpeech";
 
 function TranslatorPage() {
-  const fileInputRef = useRef(null);
   const [text, setText] = useState("");
   const [sourceLanguage, setSourceLanguage] = useState("auto");
   const [targetLanguage, setTargetLanguage] = useState("en");
-  const [documentTargetLanguage, setDocumentTargetLanguage] = useState("en");
   const [translatedText, setTranslatedText] = useState("");
   const [detectedLanguage, setDetectedLanguage] = useState("");
-
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploading, setUploading] = useState(false);
-  const [uploaded, setUploaded] = useState(false);
-  const [dragOver, setDragOver] = useState(false);
-  const [documentTranslating, setDocumentTranslating] = useState(false);
-  const [documentTranslated, setDocumentTranslated] = useState(false);
-  const [documentTranslationResult, setDocumentTranslationResult] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -49,6 +22,15 @@ function TranslatorPage() {
     setDetectedLanguage("");
   }
 
+  const handleSpeechResult = useCallback((spokenText) => {
+    setText(spokenText);
+    clearFeedback();
+  }, []);
+
+  const { isListening, isSpeaking, toggleListening, speak } = useSpeech({
+    onTranscript: handleSpeechResult,
+    sourceLanguage: sourceLanguage,
+  });
   function validateDocument(file) {
     if (!file) return false;
 
@@ -171,6 +153,7 @@ function TranslatorPage() {
     }
   }
 
+
   useEffect(() => {
     const controller = new AbortController();
     let active = true;
@@ -228,7 +211,9 @@ function TranslatorPage() {
           setLoading(false);
         }
       }
-    }, 1500);
+
+    }, 100);
+
 
     return () => {
       active = false;
@@ -245,9 +230,7 @@ function TranslatorPage() {
       await navigator.clipboard.writeText(translatedText);
       setMessage("Đã sao chép bản dịch.");
     } catch {
-      setError(
-        "Lỗi khi sao chép!",
-      );
+      setError("Lỗi khi sao chép!");
     }
   }
 
@@ -266,157 +249,6 @@ function TranslatorPage() {
           <h1>AI Translator</h1>
           <p>Dịch văn bản đa ngôn ngữ với sự hỗ trợ của AI.</p>
         </header>
-
-        <section className="document-upload-section">
-          <button
-            type="button"
-            className="button-primary upload-trigger"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-          >
-            {uploading ? "Đang tải lên..." : "Tải tài liệu lên để dịch"}
-          </button>
-
-          <div
-            className={`upload-dropzone ${dragOver ? "drag-over" : ""} ${selectedFile ? "has-file" : ""}`}
-            onClick={() => fileInputRef.current?.click()}
-            onDragOver={(event) => {
-              event.preventDefault();
-              setDragOver(true);
-            }}
-            onDragLeave={() => setDragOver(false)}
-            onDrop={handleFileDrop}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" || event.key === " ") {
-                event.preventDefault();
-                fileInputRef.current?.click();
-              }
-            }}
-            role="button"
-            tabIndex={0}
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".docx,.pdf"
-              onChange={handleFileChange}
-              hidden
-            />
-
-            {!selectedFile ? (
-              <>
-                <div className="upload-icon" aria-hidden="true">
-                  📄
-                </div>
-
-                <p className="upload-hint">
-                  Kéo thả file vào đây hoặc nhấn để chọn tài liệu
-                </p>
-
-                <span className="upload-format">Hỗ trợ DOCX, PDF</span>
-              </>
-            ) : (
-              <div className="file-preview">
-                <div className="file-header">
-                  <div className="file-info">
-                    <div className="file-name-wrap">
-                      <strong>{selectedFile.name}</strong>
-                    </div>
-                    <div className="file-meta-row">
-                      <span>{selectedFile.name.split(".").pop()?.toUpperCase() || "FILE"}</span>
-                      <span>{formatFileSize(selectedFile.size)}</span>
-                    </div>
-                  </div>
-
-                  <div className="file-actions">
-                    <button
-                      type="button"
-                      className="button-secondary small-button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        fileInputRef.current?.click();
-                      }}
-                    >
-                      Thay đổi
-                    </button>
-                    <button
-                      type="button"
-                      className="button-secondary small-button"
-                      onClick={handleRemoveFile}
-                    >
-                      Xóa
-                    </button>
-                  </div>
-                </div>
-
-                <div className="upload-status-row">
-                  <span>
-                    {uploading
-                      ? "Đang tải lên..."
-                      : uploaded
-                        ? "Tải lên thành công"
-                        : "Chưa tải lên"}
-                  </span>
-                  <span>{uploadProgress}%</span>
-                </div>
-
-                <div className="progress-bar" aria-label="Tiến độ upload">
-                  <span style={{ width: `${uploadProgress}%` }} />
-                </div>
-              </div>
-            )}
-          </div>
-
-          {uploaded && (
-            <div className="document-action-row">
-              <div className="document-language-picker">
-                <label htmlFor="document-target-language">Ngôn ngữ đích</label>
-                <select
-                  id="document-target-language"
-                  value={documentTargetLanguage}
-                  onChange={(event) => setDocumentTargetLanguage(event.target.value)}
-                  disabled={documentTranslating}
-                >
-                  {languages.map((language) => (
-                    <option key={language.code} value={language.code}>
-                      {language.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <button
-                type="button"
-                className="button-primary start-button"
-                onClick={handleStartDocumentTranslation}
-                disabled={documentTranslating}
-              >
-                {documentTranslating ? "Đang dịch tài liệu..." : documentTranslated ? "Đã dịch xong" : "Bắt đầu dịch"}
-              </button>
-            </div>
-          )}
-
-          {documentTranslated && documentTranslationResult && (
-            <div className="document-result-panel">
-              <div className="document-result-header">
-                <h3>Kết quả dịch</h3>
-                <span>{selectedFile?.name || "Tài liệu"}</span>
-              </div>
-
-              <textarea
-                className="document-result-text"
-                value={documentTranslationResult}
-                readOnly
-              />
-            </div>
-          )}
-        </section>
-
-        {message && (
-          <p className="feedback success" role="status">
-            {message}
-          </p>
-        )}
 
         <form onSubmit={(event) => event.preventDefault()}>
           <div className="translation-grid">
@@ -455,6 +287,17 @@ function TranslatorPage() {
                 <button
                   type="button"
                   className="button-secondary"
+
+                  onClick={toggleListening}
+                  title="Nói qua micro"
+                >
+                  {isListening ? "🔴 Đang nghe..." : "🎤 Nói"}
+                </button>
+
+                <button
+                  type="button"
+                  className="button-secondary"
+
                   disabled={!text}
                   onClick={() => {
                     setText("");
@@ -488,6 +331,16 @@ function TranslatorPage() {
               />
 
               <div className="panel-footer">
+                <button
+                  type="button"
+                  className="button-secondary"
+                  onClick={() => speak(translatedText, targetLanguage)}
+                  disabled={loading || !translatedText || isSpeaking}
+                  title="Nghe phát âm"
+                >
+                  {isSpeaking ? "🔊 Đang đọc..." : "🔊 Nghe"}
+                </button>
+
                 <button
                   type="button"
                   className="button-secondary"

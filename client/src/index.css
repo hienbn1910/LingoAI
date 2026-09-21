@@ -17,6 +17,7 @@ button,
 select,
 textarea {
   font: inherit;
+  scroll-behavior: smooth;
 }
 
 #root {
@@ -408,6 +409,33 @@ button:disabled {
     padding: 28px 16px;
   }
 }
+
+/* =========================================
+   Hiệu ứng trực quan nhận biết Micro đang thu âm
+   ========================================= */
+.button-secondary.listening {
+  background-color: #fee2e2;
+  color: #dc2626;
+  font-weight: 600;
+  outline: 2px solid #ef4444;
+  animation: pulse-recording 1.2s infinite ease-in-out;
+}
+
+@keyframes pulse-recording {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+  }
+  50% {
+    transform: scale(1.04);
+    box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
+}
+
 /* bổ sung định dạng cho dịch Image*/
 .image-preview-container {
   position: relative;
@@ -444,7 +472,7 @@ button:disabled {
 .image-dropzone:hover {
   border-color: #2563eb;
 }
-/*------------------------------*/
+
 
   .document-upload-section {
     padding: 18px 16px;
@@ -468,4 +496,5 @@ button:disabled {
   .small-button {
     flex: 1;
   }
+
 

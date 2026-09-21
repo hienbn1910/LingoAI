@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, NavLink } from "react-router-dom";
 
 import TranslatorPage from "./pages/TranslatorPage";
+import UploadFileTranslatorPage from "./pages/UploadFileTranslatorPage";
 import ImageTranslatorPage from "./pages/ImageTranslatorPage";
 import HistoryPage from "./pages/HistoryPage";
 
@@ -35,10 +36,14 @@ function App() {
         <NavLink to="/history" style={navLinkStyle}>
           Lịch sử dịch
         </NavLink>
+        <NavLink to="/upload-file">Dịch tài liệu</NavLink>
+
+        <NavLink to="/image">Dịch hình ảnh</NavLink>
       </nav>
 
       <Routes>
         <Route path="/" element={<TranslatorPage />} />
+        <Route path="/upload-file" element={<UploadFileTranslatorPage />} />
         <Route path="/image" element={<ImageTranslatorPage />} />
         <Route path="/history" element={<HistoryPage />} />
         <Route path="*" element={<p>Không tìm thấy trang.</p>} />

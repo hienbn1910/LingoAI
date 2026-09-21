@@ -25,10 +25,12 @@
     "mammoth": "^1.12.3",
     "mongoose": "^9.10.1",
     "multer": "^2.4.0",
+    "node-cron": "^4.6.0",
     "openai": "^7.18.0",
     "pdf-parse": "^2.4.5",
     "react-router-dom": "^7.18.4",
-    "tesseract.js": "^7.0.0"
+    "tesseract.js": "^7.0.0",
+    "uuid": "^14.0.2"
   },
   "devDependencies": {
     "concurrently": "^10.0.5",

@@ -1,5 +1,13 @@
 import mammoth from "mammoth";
 import { translateWithAI } from "../services/llmService.js";
+import TranslationHistory from "../models/TranslationHistory.js";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+import { v4 as uuidv4 } from "uuid";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const supportedLanguages = new Set([
   "vi",
@@ -82,6 +90,14 @@ export async function createTranslation(req, res) {
         text,
         sourceLanguage,
         targetLanguage,
+      });
+
+      await TranslationHistory.create({
+        originalText: text,
+        translatedText: result.translatedText,
+        sourceLanguage,
+        targetLanguage,
+        type: "text",
       });
 
       return res.status(200).json({
@@ -184,6 +200,22 @@ export async function createDocumentTranslation(req, res) {
       text: extractedText,
       sourceLanguage,
       targetLanguage,
+    });
+
+    const extension = path.extname(file.originalname);
+    const fileName = `${uuidv4()}${extension}`;
+    const relativeFilePath = `src/uploads/${fileName}`;
+    const fullPath = path.join(__dirname, "../../", relativeFilePath);
+    fs.writeFileSync(fullPath, file.buffer);
+
+    await TranslationHistory.create({
+      originalText: extractedText,
+      translatedText: result.translatedText,
+      sourceLanguage,
+      targetLanguage,
+      type: "document",
+      filePath: relativeFilePath,
+      fileName: file.originalname,
     });
 
     return res.status(200).json({

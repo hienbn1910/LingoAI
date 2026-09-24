@@ -36,9 +36,7 @@ function App() {
         <NavLink to="/history" style={navLinkStyle}>
           Lịch sử dịch
         </NavLink>
-        <NavLink to="/upload-file">Dịch tài liệu</NavLink>
-
-        <NavLink to="/image">Dịch hình ảnh</NavLink>
+        <NavLink to="/upload-file" style={navLinkStyle}>Dịch tài liệu</NavLink>
       </nav>
 
       <Routes>

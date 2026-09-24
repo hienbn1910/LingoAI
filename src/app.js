@@ -1,5 +1,6 @@
 import express from "express";
 import path from "path";
+import fs from "fs";
 import { fileURLToPath } from "url";
 import translationRoutes from "./routes/translationRoutes.js";
 import cors from "cors"; // <--- 1. Thêm import cors ở đây
@@ -9,11 +10,14 @@ import historyRoutes from "./routes/historyRoutes.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const uploadsDir = path.join(__dirname, "uploads");
+fs.mkdirSync(uploadsDir, { recursive: true });
+
 const app = express();
 
 app.use(cors()); // <--- 2. Kích hoạt cors middleware cho phép mọi nguồn gọi vào
 app.use(express.json({ limit: "100kb" }));
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use("/uploads", express.static(uploadsDir));
 
 app.get("/api/health", (req, res) => {
   res.status(200).json({

@@ -6,6 +6,7 @@ import translationRoutes from "./routes/translationRoutes.js";
 import cors from "cors"; // <--- 1. Thêm import cors ở đây
 import ocrRoutes from "./routes/ocrRoutes.js"; // <-- Thêm import route OCR
 import historyRoutes from "./routes/historyRoutes.js";
+import documentRoutes from "./routes/documentRoutes.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -29,6 +30,7 @@ app.get("/api/health", (req, res) => {
 app.use("/api/translations", translationRoutes);
 app.use("/api/ocr", ocrRoutes); // <-- Đăng ký route /api/ocr tại đây
 app.use("/api/history", historyRoutes);
+app.use("/api/translations/document", documentRoutes);
 
 // Đặt sau tất cả các route hợp lệ.
 app.use((req, res) => {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import LanguageSelect from "../components/LanguageSelect";
 import ImageTranslator from "../components/ImageTranslator";
 import { languages } from "../constants/languages";
@@ -23,20 +23,23 @@ function ImageTranslatorPage() {
     setDetectedLanguage("");
   }
 
-  async function handleSubmit(event) {
-    event.preventDefault();
-    clearFeedback();
-
-    if (!selectedImage) {
+  // Hàm xử lý tự động OCR và Dịch ảnh
+  async function processImageTranslation(
+    fileToProcess,
+    srcLang = sourceLanguage,
+    tgtLang = targetLanguage,
+  ) {
+    if (!fileToProcess) {
       setError("Vui lòng chọn hoặc tải lên một hình ảnh.");
       return;
     }
 
+    clearFeedback();
     setLoading(true);
 
     try {
       setMessage("Đang quét chữ từ hình ảnh (OCR)...");
-      const ocrResult = await submitImageOCR(selectedImage);
+      const ocrResult = await submitImageOCR(fileToProcess);
       const extractedText =
         ocrResult.data?.extractedText || ocrResult.extractedText;
 
@@ -47,8 +50,8 @@ function ImageTranslatorPage() {
       setMessage("Đang dịch văn bản...");
       const result = await submitTranslation({
         text: extractedText,
-        sourceLanguage,
-        targetLanguage,
+        sourceLanguage: srcLang,
+        targetLanguage: tgtLang,
       });
 
       setTranslatedText(result.data.translatedText);
@@ -63,6 +66,64 @@ function ImageTranslatorPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  // 1. Xử lý khi nhấn nút "Dán từ bộ nhớ tạm"
+  async function handlePasteClipboard() {
+    try {
+      const clipboardItems = await navigator.clipboard.read();
+      let foundImage = false;
+
+      for (const item of clipboardItems) {
+        const imageType = item.types.find((type) => type.startsWith("image/"));
+        if (imageType) {
+          const blob = await item.getType(imageType);
+          const file = new File([blob], "clipboard-image.png", {
+            type: imageType,
+          });
+          setSelectedImage(file);
+          processImageTranslation(file, sourceLanguage, targetLanguage);
+          foundImage = true;
+          break;
+        }
+      }
+
+      if (!foundImage) {
+        setError("Không tìm thấy hình ảnh nào trong bộ nhớ tạm.");
+      }
+    } catch (err) {
+      console.error("Lỗi đọc clipboard:", err);
+      setError(
+        "Không thể tự động đọc bộ nhớ tạm. Bạn có thể nhấn tổ hợp phím Ctrl + V để dán.",
+      );
+    }
+  }
+
+  // 2. Tự động lắng nghe sự kiện nhấn Ctrl + V toàn trang
+  useEffect(() => {
+    function handleGlobalPaste(e) {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      for (const item of items) {
+        if (item.type.startsWith("image/")) {
+          const file = item.getAsFile();
+          if (file) {
+            setSelectedImage(file);
+            processImageTranslation(file, sourceLanguage, targetLanguage);
+            break;
+          }
+        }
+      }
+    }
+
+    window.addEventListener("paste", handleGlobalPaste);
+    return () => window.removeEventListener("paste", handleGlobalPaste);
+  }, [sourceLanguage, targetLanguage]);
+
+  function handleSubmit(event) {
+    if (event) event.preventDefault();
+    processImageTranslation(selectedImage);
   }
 
   async function handleCopy() {
@@ -99,7 +160,6 @@ function ImageTranslatorPage() {
 
         <form onSubmit={handleSubmit}>
           <div className="translation-grid">
-            {/* Cột trái: Ngôn ngữ nguồn (Tự nhận diện) + Chọn ảnh */}
             <section className="translation-panel">
               <LanguageSelect
                 id="source-language"
@@ -107,7 +167,13 @@ function ImageTranslatorPage() {
                 value={sourceLanguage}
                 onChange={(value) => {
                   setSourceLanguage(value);
-                  clearFeedback();
+                  if (selectedImage) {
+                    processImageTranslation(
+                      selectedImage,
+                      value,
+                      targetLanguage,
+                    );
+                  }
                 }}
                 allowAuto
                 disabled={loading}
@@ -117,17 +183,16 @@ function ImageTranslatorPage() {
                 selectedImage={selectedImage}
                 onImageSelect={(file) => {
                   setSelectedImage(file);
-                  clearFeedback();
-                  setMessage(`Đã chọn tệp: ${file.name}`);
+                  processImageTranslation(file, sourceLanguage, targetLanguage);
                 }}
                 onClearImage={() => {
                   setSelectedImage(null);
                   clearFeedback();
                 }}
+                onPasteClipboard={handlePasteClipboard}
               />
             </section>
 
-            {/* Cột phải: Ngôn ngữ đích + Kết quả dịch */}
             <section className="translation-panel">
               <LanguageSelect
                 id="target-language"
@@ -135,7 +200,13 @@ function ImageTranslatorPage() {
                 value={targetLanguage}
                 onChange={(value) => {
                   setTargetLanguage(value);
-                  clearFeedback();
+                  if (selectedImage) {
+                    processImageTranslation(
+                      selectedImage,
+                      sourceLanguage,
+                      value,
+                    );
+                  }
                 }}
                 disabled={loading}
               />
@@ -182,7 +253,11 @@ function ImageTranslatorPage() {
           )}
 
           <div className="form-actions">
-            <button type="submit" className="button-primary" disabled={loading}>
+            <button
+              type="submit"
+              className="button-primary"
+              disabled={loading || !selectedImage}
+            >
               {loading ? "Đang xử lý..." : "Dịch ảnh"}
             </button>
           </div>

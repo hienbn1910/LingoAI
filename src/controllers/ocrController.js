@@ -50,7 +50,9 @@ export async function handleOCR(req, res, next) {
     const extension = path.extname(req.file.originalname);
     const fileName = `${uuidv4()}${extension}`;
     const relativeFilePath = `src/uploads/${fileName}`;
-    const fullPath = path.join(__dirname, "../../", relativeFilePath);
+    const uploadDir = path.join(__dirname, "..", "uploads");
+    fs.mkdirSync(uploadDir, { recursive: true });
+    const fullPath = path.join(uploadDir, fileName);
     fs.writeFileSync(fullPath, req.file.buffer);
 
     await TranslationHistory.create({

@@ -205,7 +205,9 @@ export async function createDocumentTranslation(req, res) {
     const extension = path.extname(file.originalname);
     const fileName = `${uuidv4()}${extension}`;
     const relativeFilePath = `src/uploads/${fileName}`;
-    const fullPath = path.join(__dirname, "../../", relativeFilePath);
+    const uploadDir = path.join(__dirname, "..", "uploads");
+    fs.mkdirSync(uploadDir, { recursive: true });
+    const fullPath = path.join(uploadDir, fileName);
     fs.writeFileSync(fullPath, file.buffer);
 
     await TranslationHistory.create({

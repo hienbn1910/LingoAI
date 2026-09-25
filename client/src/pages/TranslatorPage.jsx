@@ -212,7 +212,7 @@ function TranslatorPage() {
         }
       }
 
-    }, 100);
+    }, 1500);
 
 
     return () => {
@@ -246,7 +246,7 @@ function TranslatorPage() {
       />
       <main className="translator">
         <header className="page-header">
-          <h1>AI Translator</h1>
+          <h1>LingoAI</h1>
           <p>Dịch văn bản đa ngôn ngữ với sự hỗ trợ của AI.</p>
         </header>
 

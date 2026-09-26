@@ -1,4 +1,3 @@
-import mammoth from "mammoth";
 import { translateWithAI } from "../services/llmService.js";
 import TranslationHistory from "../models/TranslationHistory.js";
 
@@ -60,6 +59,29 @@ export async function createTranslation(req, res) {
       targetLanguage,
     });
 
+    // Lưu lịch sử sau khi dịch thành công.
+    try {
+      await TranslationHistory.create({
+        originalText: text,
+        translatedText: result.translatedText,
+        sourceLanguage,
+        targetLanguage,
+        type: "text",
+      });
+    } catch (saveError) {
+      console.error("Không thể lưu lịch sử dịch văn bản:", {
+        name: saveError.name,
+        message: saveError.message,
+        code: saveError.code,
+      });
+
+      return res.status(500).json({
+        success: false,
+        code: "HISTORY_SAVE_FAILED",
+        message: "Đã dịch xong nhưng không thể lưu lịch sử. Vui lòng thử lại.",
+      });
+    }
+
     return res.status(200).json({
       success: true,
       message: "Dịch thành công.",
@@ -72,17 +94,44 @@ export async function createTranslation(req, res) {
       },
     });
   } catch (error) {
-    // Chỉ ghi thông tin chẩn đoán cần thiết.
-    console.error("Lỗi dịch:", {
+    console.error("Lỗi dịch văn bản:", {
       name: error.name,
+      message: error.message,
       status: error.status,
       code: error.code,
     });
+
+    if (error.code === "INVALID_INPUT") {
+      return res.status(400).json({
+        success: false,
+        message: error.message,
+      });
+    }
 
     if (error.code === "LANGUAGE_UNDETERMINED") {
       return res.status(422).json({
         success: false,
         message: error.message,
+      });
+    }
+
+    if (
+      error.code === "AI_TIMEOUT" ||
+      error.name === "APIConnectionTimeoutError" ||
+      error.name === "TimeoutError" ||
+      error.name === "AbortError"
+    ) {
+      return res.status(504).json({
+        success: false,
+        message: "AI phản hồi quá lâu. Vui lòng thử lại.",
+      });
+    }
+
+    if (error.code === "OLLAMA_CONNECTION_ERROR") {
+      return res.status(503).json({
+        success: false,
+        message:
+          "Không kết nối được Ollama. Hãy kiểm tra ứng dụng Ollama đang chạy.",
       });
     }
 
@@ -106,10 +155,11 @@ export async function createTranslation(req, res) {
       });
     }
 
-    if (error.name === "APIConnectionTimeoutError") {
-      return res.status(504).json({
+    if (error.code === "UNTRANSLATED_TEXT") {
+      return res.status(502).json({
         success: false,
-        message: "AI phản hồi quá lâu. Vui lòng thử lại.",
+        message:
+          "Model trả lại văn bản gốc thay vì bản dịch. Hãy thử câu đầy đủ hơn hoặc model khác.",
       });
     }
 
@@ -119,4 +169,3 @@ export async function createTranslation(req, res) {
     });
   }
 }
-

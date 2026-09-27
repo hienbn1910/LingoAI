@@ -28,9 +28,12 @@ function UploadFileTranslatorPage() {
   const [dragOver, setDragOver] = useState(false);
   const [documentTranslating, setDocumentTranslating] = useState(false);
   const [documentTranslated, setDocumentTranslated] = useState(false);
-  const [documentTranslationResult, setDocumentTranslationResult] = useState("");
+  const [documentTranslationResult, setDocumentTranslationResult] =
+    useState("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [downloadInfo, setDownloadInfo] = useState(null);
+  const [downloading, setDownloading] = useState(false);
 
   function validateDocument(file) {
     if (!file) return false;
@@ -44,7 +47,9 @@ function UploadFileTranslatorPage() {
     }
 
     if (file.size > MAX_FILE_SIZE) {
-      setError(`Tệp vượt quá dung lượng cho phép (${MAX_FILE_SIZE / (1024 * 1024)}MB).`);
+      setError(
+        `Tệp vượt quá dung lượng cho phép (${MAX_FILE_SIZE / (1024 * 1024)}MB).`,
+      );
       return false;
     }
 
@@ -147,10 +152,42 @@ function UploadFileTranslatorPage() {
       setDocumentTranslated(true);
       setDocumentTranslationResult(result.data?.translatedText || "");
       setMessage(`Tài liệu "${selectedFile.name}" đã được dịch thành công.`);
+      setDownloadInfo(result.data);
     } catch (error) {
       setDocumentTranslating(false);
       setError(error.message || "Không thể dịch tài liệu.");
       setMessage("");
+    }
+  }
+
+  async function handleDownloadTranslation() {
+    if (!downloadInfo?.historyId || downloading) return;
+    setDownloading(true);
+    setError("");
+    try {
+      const response = await fetch(
+        `/api/translations/document/${encodeURIComponent(downloadInfo.historyId)}/download`,
+      );
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.message || "Không tải được bản dịch.");
+      }
+      const url = URL.createObjectURL(await response.blob());
+      const link = document.createElement("a");
+      link.href = url;
+      link.download =
+        (downloadInfo.fileName || "document").replace(/\.[^.]+$/, "") +
+        "-" +
+        (downloadInfo.targetLanguage || "translated") +
+        ".docx";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      setError(error.message || "Không tải được bản dịch.");
+    } finally {
+      setDownloading(false);
     }
   }
 
@@ -227,7 +264,10 @@ function UploadFileTranslatorPage() {
                       <strong>{selectedFile.name}</strong>
                     </div>
                     <div className="file-meta-row">
-                      <span>{selectedFile.name.split(".").pop()?.toUpperCase() || "FILE"}</span>
+                      <span>
+                        {selectedFile.name.split(".").pop()?.toUpperCase() ||
+                          "FILE"}
+                      </span>
                       <span>{formatFileSize(selectedFile.size)}</span>
                     </div>
                   </div>
@@ -278,7 +318,13 @@ function UploadFileTranslatorPage() {
                 <select
                   id="document-target-language"
                   value={documentTargetLanguage}
-                  onChange={(event) => setDocumentTargetLanguage(event.target.value)}
+                  onChange={(event) => {
+                    setDocumentTargetLanguage(event.target.value);
+                    setDocumentTranslated(false);
+                    setDocumentTranslationResult(null);
+                    setError("");
+                    setMessage("");
+                  }}
                   disabled={documentTranslating}
                 >
                   {languages.map((language) => (
@@ -295,7 +341,11 @@ function UploadFileTranslatorPage() {
                 onClick={handleStartDocumentTranslation}
                 disabled={documentTranslating}
               >
-                {documentTranslating ? "Đang dịch tài liệu..." : documentTranslated ? "Đã dịch xong" : "Bắt đầu dịch"}
+                {documentTranslating
+                  ? "Đang dịch tài liệu..."
+                  : documentTranslated
+                    ? "Đã dịch xong"
+                    : "Bắt đầu dịch"}
               </button>
             </div>
           )}
@@ -312,6 +362,16 @@ function UploadFileTranslatorPage() {
                 value={documentTranslationResult}
                 readOnly
               />
+              {documentTranslated && downloadInfo?.historyId && (
+                <button
+                  type="button"
+                  className="button-primary"
+                  onClick={handleDownloadTranslation}
+                  disabled={downloading}
+                >
+                  {downloading ? "Đang tạo file..." : "Tải tài liệu đã dịch"}
+                </button>
+              )}
             </div>
           )}
         </section>

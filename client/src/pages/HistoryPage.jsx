@@ -58,7 +58,14 @@ function HistoryPage() {
 
   return (
     <div style={{ maxWidth: "1000px", margin: "0 auto", padding: "20px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "20px",
+        }}
+      >
         <h2>Lịch sử dịch</h2>
         {history.length > 0 && (
           <button
@@ -94,9 +101,16 @@ function HistoryPage() {
                 boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
               }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "12px" }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  marginBottom: "12px",
+                }}
+              >
                 <span style={{ fontSize: "0.85rem", color: "#6b7280" }}>
-                  Thời gian: {formatDate(item.createdAt)} | Loại: {item.type.toUpperCase()}
+                  Thời gian: {formatDate(item.createdAt)} | Loại:{" "}
+                  {item.type.toUpperCase()}
                   {item.fileName && ` | File: ${item.fileName}`}
                 </span>
                 <button
@@ -115,7 +129,13 @@ function HistoryPage() {
 
               <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
                 <div style={{ flex: 1, minWidth: "300px" }}>
-                  <div style={{ fontWeight: "bold", marginBottom: "4px", color: "#374151" }}>
+                  <div
+                    style={{
+                      fontWeight: "bold",
+                      marginBottom: "4px",
+                      color: "#374151",
+                    }}
+                  >
                     Gốc ({item.sourceLanguage}):
                   </div>
                   <div
@@ -133,7 +153,13 @@ function HistoryPage() {
 
                 {item.translatedText && (
                   <div style={{ flex: 1, minWidth: "300px" }}>
-                    <div style={{ fontWeight: "bold", marginBottom: "4px", color: "#374151" }}>
+                    <div
+                      style={{
+                        fontWeight: "bold",
+                        marginBottom: "4px",
+                        color: "#374151",
+                      }}
+                    >
                       Bản dịch ({item.targetLanguage}):
                     </div>
                     <div

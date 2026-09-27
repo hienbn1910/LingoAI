@@ -1,135 +1,115 @@
-import mammoth from "mammoth";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
-import { v4 as uuidv4 } from "uuid";
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { randomUUID } from 'node:crypto';
+import mongoose from 'mongoose';
+import TranslationHistory from '../models/TranslationHistory.js';
+import { extractDocument, exportDocument } from '../services/documentService.js';
+import { translateDocument } from '../services/documentLlmService.js';
+import { exportDocxWithOriginalLayout } from "../services/docxLayoutService.js";
 
-import { translateWithAI } from "../services/llmService.js";
-import TranslationHistory from "../models/TranslationHistory.js";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const supportedLanguages = new Set([
-  "vi",
-  "en",
-  "ja",
-  "ko",
-  "zh",
-  "fr",
-  "de",
-  "es",
-]);
-
-function sanitizeDocumentText(text) {
-  return String(text || "")
-    .replace(/\s+/g, " ")
-    .replace(/\u00a0/g, " ")
-    .trim();
-}
-
-async function extractTextFromDocument(file) {
-  const fileName = file.originalname.toLowerCase();
-
-  if (fileName.endsWith(".docx")) {
-    const result = await mammoth.extractRawText({
-      buffer: file.buffer,
-    });
-
-    return sanitizeDocumentText(result.value);
-  }
-
-  if (fileName.endsWith(".pdf")) {
-    const pdfModule = await import("pdf-parse");
-    const pdfParse = pdfModule.default ?? pdfModule;
-    const result = await pdfParse(file.buffer);
-
-    return sanitizeDocumentText(result.text);
-  }
-
-  throw new Error("Định dạng file không được hỗ trợ.");
-}
+const uploadDir = fileURLToPath(new URL('../uploads/', import.meta.url));
+const supported = new Set(['vi', 'en', 'ja', 'ko', 'zh', 'fr', 'de', 'es']);
 
 export async function createDocumentTranslation(req, res) {
-  const file = req.file;
-  const sourceLanguage = req.body?.sourceLanguage || "auto";
-  const targetLanguage = req.body?.targetLanguage || "en";
-
-  if (!file) {
-    return res.status(400).json({
-      success: false,
-      message: "Vui lòng chọn file DOCX hoặc PDF để dịch.",
-    });
+  const { sourceLanguage = 'auto', targetLanguage = 'en' } = req.body || {};
+  if (!req.file) return res.status(400).json({ success: false, message: 'Vui lòng chọn file DOCX hoặc PDF.' });
+  if (!supported.has(targetLanguage) || (sourceLanguage !== 'auto' && !supported.has(sourceLanguage))) {
+    return res.status(400).json({ success: false, message: 'Ngôn ngữ không hợp lệ.' });
   }
-
-  if (!supportedLanguages.has(targetLanguage)) {
-    return res.status(400).json({
-      success: false,
-      message: "Vui lòng chọn ngôn ngữ đích hợp lệ.",
-    });
+  let extracted;
+  try { extracted = await extractDocument(req.file); }
+  catch (error) {
+    console.error('Đọc tài liệu:', error.message);
+    return res.status(422).json({ success: false, message: error.message || 'Không đọc được tài liệu. File có thể bị hỏng hoặc được bảo vệ bằng mật khẩu.' });
   }
-
-  if (sourceLanguage !== "auto" && !supportedLanguages.has(sourceLanguage)) {
-    return res.status(400).json({
-      success: false,
-      message: "Ngôn ngữ nguồn không được hỗ trợ.",
-    });
-  }
-
+  let blocks;
   try {
-    const extractedText = await extractTextFromDocument(file);
-
-    if (!extractedText) {
-      return res.status(400).json({
-        success: false,
-        message: "Tài liệu không chứa nội dung để dịch.",
-      });
-    }
-
-    const result = await translateWithAI({
-      text: extractedText,
-      sourceLanguage,
-      targetLanguage,
-    });
-
-    // Lưu file gốc vào src/uploads.
-    const extension = path.extname(file.originalname);
-    const fileName = `${uuidv4()}${extension}`;
-    const relativeFilePath = `src/uploads/${fileName}`;
-    const uploadDir = path.join(__dirname, "..", "uploads");
-
-    fs.mkdirSync(uploadDir, { recursive: true });
-
-    const fullPath = path.join(uploadDir, fileName);
-    fs.writeFileSync(fullPath, file.buffer);
-
-    await TranslationHistory.create({
-      originalText: extractedText,
-      translatedText: result.translatedText,
-      sourceLanguage,
-      targetLanguage,
-      type: "document",
-      filePath: relativeFilePath,
-      fileName: file.originalname,
-    });
-
-    return res.status(200).json({
-      success: true,
-      message: "Dịch tài liệu thành công.",
-      data: {
-        fileName: file.originalname,
-        sourceLanguage,
-        targetLanguage,
-        translatedText: result.translatedText,
-        detectedLanguage: result.detectedLanguage,
-      },
-    });
+    blocks = await translateDocument({ blocks: extracted.blocks, sourceLanguage, targetLanguage });
   } catch (error) {
-    console.error("Lỗi dịch tài liệu:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: error.message || "Không thể dịch tài liệu. Vui lòng thử lại.",
+    console.error('Dịch tài liệu:', error.message);
+    return res.status(error.status || 502).json({ success: false, message: error.message || 'Không dịch được tài liệu.' });
+  }
+  const fileName = randomUUID() + path.extname(req.file.originalname).toLowerCase();
+  const fullPath = path.join(uploadDir, fileName);
+  const originalText = blocks.map(b => b.originalText).join('\n\n');
+  const translatedText = blocks.map(b => b.translatedText).join('\n\n');
+  try {
+    await fs.mkdir(uploadDir, { recursive: true });
+    await fs.writeFile(fullPath, req.file.buffer);
+    const history = await TranslationHistory.create({
+      type: 'document', sourceLanguage, targetLanguage, originalText, translatedText,
+      fileName: req.file.originalname, filePath: `src/uploads/${fileName}`, documentBlocks: blocks,
     });
+    return res.json({ success: true, message: 'Dịch tài liệu thành công.', data: {
+      historyId: history._id, fileName: req.file.originalname,
+      sourceLanguage, targetLanguage, translatedText, blocks, warnings: extracted.warnings,
+    } });
+  } catch (error) {
+    await fs.unlink(fullPath).catch(() => {});
+    console.error('Lưu tài liệu:', error.message);
+    return res.status(500).json({ success: false, message: 'Đã dịch nhưng không lưu được lịch sử. Kiểm tra MongoDB và thư mục uploads.' });
+  }
+}
+
+export async function downloadDocument(req, res) {
+  if (!mongoose.isObjectIdOrHexString(req.params.id)) {
+    return res
+      .status(400)
+      .json({ success: false, message: "ID không hợp lệ." });
+  }
+  try {
+    const doc = await TranslationHistory.findOne({
+      _id: req.params.id,
+      type: "document",
+    });
+    if (!doc?.documentBlocks?.length) {
+      return res
+        .status(404)
+        .json({
+          success: false,
+          message:
+            "Không tìm thấy bản dịch có cấu trúc. Hãy dịch lại tài liệu.",
+        });
+    }
+    let buffer;
+    if (doc.fileName?.toLowerCase().endsWith(".docx")) {
+      if (!doc.filePath)
+        return res
+          .status(404)
+          .json({ success: false, message: "Không còn đường dẫn file gốc." });
+      const savedName = path.basename(doc.filePath.replace(/\\/g, "/"));
+      const originalBuffer = await fs.readFile(path.join(uploadDir, savedName));
+      buffer = await exportDocxWithOriginalLayout(
+        originalBuffer,
+        doc.documentBlocks,
+      );
+    } else {
+      // PDF input still uses the existing basic DOCX exporter.
+      buffer = await exportDocument(doc.documentBlocks);
+    }
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    );
+    res.setHeader(
+      "Content-Disposition",
+      'attachment; filename="translation.docx"',
+    );
+    res.setHeader("Cache-Control", "no-store");
+    return res.send(buffer);
+  } catch (error) {
+    console.error("Tải bản dịch:", error.message);
+    return res
+      .status(error.code === "ENOENT" ? 404 : error.status || 500)
+      .json({
+        success: false,
+        message:
+          error.code === "ENOENT"
+            ? "Không còn file gốc trên server. Hãy tải lên và dịch lại tài liệu."
+            : error.status === 409
+              ? error.message
+              : "Không xuất được bản dịch. Kiểm tra log backend.",
+      });
   }
 }

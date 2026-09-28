@@ -32,6 +32,8 @@
     "node-cron": "^4.6.0",
     "openai": "^7.18.0",
     "pdf-parse": "^2.4.5",
+    "pdfjs-dist": "^5.7.284",
+    "puppeteer": "^24.43.1",
     "react-router-dom": "^7.18.4",
     "tesseract.js": "^7.0.0",
     "uuid": "^14.0.2"

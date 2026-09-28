@@ -15,41 +15,69 @@ function formatFileSize(bytes) {
     unitIndex += 1;
   }
 
-  return `${value.toFixed(value >= 10 || unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
+  return `${value.toFixed(value >= 10 || unitIndex === 0 ? 0 : 1)} ${
+    units[unitIndex]
+  }`;
 }
 
 function UploadFileTranslatorPage() {
   const fileInputRef = useRef(null);
+  const translationInFlight = useRef(false);
+  const downloadInFlight = useRef(false);
+
   const [selectedFile, setSelectedFile] = useState(null);
   const [documentTargetLanguage, setDocumentTargetLanguage] = useState("en");
+
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [uploaded, setUploaded] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+
   const [documentTranslating, setDocumentTranslating] = useState(false);
   const [documentTranslated, setDocumentTranslated] = useState(false);
+
+  // Chuỗi văn bản dùng để hiển thị.
   const [documentTranslationResult, setDocumentTranslationResult] =
     useState("");
-  const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
+
+  // Object chứa historyId, fileName, targetLanguage... dùng để tải file.
   const [downloadInfo, setDownloadInfo] = useState(null);
   const [downloading, setDownloading] = useState(false);
+
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+
+  const busy = documentTranslating || downloading;
+
+  function resetTranslationResult() {
+    setDocumentTranslated(false);
+    setDocumentTranslationResult("");
+    setDownloadInfo(null);
+    setError("");
+    setMessage("");
+  }
 
   function validateDocument(file) {
     if (!file) return false;
 
     const extension = file.name.split(".").pop()?.toLowerCase();
-    const validType = extension === "docx" || extension === "pdf";
 
-    if (!validType) {
+    if (extension !== "docx" && extension !== "pdf") {
       setError("Tệp không hợp lệ. Chỉ hỗ trợ định dạng DOCX hoặc PDF.");
       return false;
     }
 
     if (file.size > MAX_FILE_SIZE) {
       setError(
-        `Tệp vượt quá dung lượng cho phép (${MAX_FILE_SIZE / (1024 * 1024)}MB).`,
+        `Tệp vượt quá dung lượng cho phép (${
+          MAX_FILE_SIZE / (1024 * 1024)
+        }MB).`,
       );
+      return false;
+    }
+
+    if (file.size === 0) {
+      setError("Tệp đang trống. Vui lòng chọn tài liệu khác.");
       return false;
     }
 
@@ -57,136 +85,271 @@ function UploadFileTranslatorPage() {
   }
 
   function handleDocumentSelect(file) {
-    if (!file || !validateDocument(file)) {
+    if (
+      translationInFlight.current ||
+      downloadInFlight.current ||
+      !validateDocument(file)
+    ) {
       return;
     }
 
+    resetTranslationResult();
     setSelectedFile(file);
-    setUploaded(false);
-    setDocumentTranslating(false);
-    setDocumentTranslated(false);
-    setDocumentTranslationResult("");
     setUploadProgress(0);
-    setUploading(true);
-    setError("");
-    setMessage("");
+    setUploading(false);
 
-    let progress = 0;
-    const timer = setInterval(() => {
-      progress += 18;
-
-      if (progress >= 100) {
-        clearInterval(timer);
-        setUploadProgress(100);
-        setUploading(false);
-        setUploaded(true);
-        setMessage("Tải lên tài liệu thành công. Bạn có thể bắt đầu dịch.");
-        return;
-      }
-
-      setUploadProgress(progress);
-    }, 180);
-
-    return () => clearInterval(timer);
+    // Giữ state này để hiện hàng chọn ngôn ngữ và nút dịch.
+    // File chỉ thực sự được gửi khi bấm Bắt đầu dịch.
+    setUploaded(true);
+    setMessage("Đã chọn tài liệu. Bấm Bắt đầu dịch để gửi file.");
   }
 
   function handleFileChange(event) {
-    const file = event.target.files?.[0];
-    handleDocumentSelect(file);
+    handleDocumentSelect(event.target.files?.[0]);
     event.target.value = "";
   }
 
   function handleFileDrop(event) {
     event.preventDefault();
     setDragOver(false);
-    const file = event.dataTransfer.files?.[0];
-    handleDocumentSelect(file);
+
+    if (busy) return;
+
+    handleDocumentSelect(event.dataTransfer.files?.[0]);
   }
 
   function handleRemoveFile(event) {
     event.stopPropagation();
+
+    if (busy) return;
+
+    resetTranslationResult();
     setSelectedFile(null);
     setUploadProgress(0);
     setUploading(false);
     setUploaded(false);
-    setDocumentTranslating(false);
-    setDocumentTranslated(false);
-    setDocumentTranslationResult("");
-    setError("");
-    setMessage("");
+    setDragOver(false);
 
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
   }
 
+  function handleLanguageChange(event) {
+    if (busy) return;
+
+    setDocumentTargetLanguage(event.target.value);
+    resetTranslationResult();
+  }
+
   async function handleStartDocumentTranslation() {
-    if (!selectedFile || !uploaded || documentTranslating) {
+    if (
+      !selectedFile ||
+      !uploaded ||
+      translationInFlight.current ||
+      downloadInFlight.current
+    ) {
       return;
     }
 
+    translationInFlight.current = true;
+
+    const file = selectedFile;
+    const targetLanguage = documentTargetLanguage;
+
+    resetTranslationResult();
     setDocumentTranslating(true);
-    setDocumentTranslated(false);
-    setDocumentTranslationResult("");
-    setError("");
-    setMessage("Đang dịch tài liệu, vui lòng chờ...");
+    setUploading(true);
+    setUploadProgress(0);
+    setMessage("Đang gửi tài liệu lên server...");
 
     try {
       const formData = new FormData();
-      formData.append("file", selectedFile);
-      formData.append("sourceLanguage", "auto");
-      formData.append("targetLanguage", documentTargetLanguage);
 
-      const response = await fetch("/api/translations/document", {
-        method: "POST",
-        body: formData,
+      formData.append("file", file);
+      formData.append("sourceLanguage", "auto");
+      formData.append("targetLanguage", targetLanguage);
+
+      // Theo dõi tiến độ gửi file thực tế.
+      const result = await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+
+        xhr.open("POST", "/api/translations/document");
+        xhr.timeout = 300_000;
+
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) {
+            setUploadProgress(Math.round((event.loaded / event.total) * 100));
+          }
+        };
+
+        xhr.upload.onload = () => {
+          setUploading(false);
+          setUploadProgress(100);
+          setMessage("Đã gửi file. Đang xử lý và dịch tài liệu...");
+        };
+
+        xhr.onload = () => {
+          let data;
+
+          try {
+            data = JSON.parse(xhr.responseText);
+          } catch {
+            reject(new Error("Backend trả về dữ liệu không hợp lệ."));
+            return;
+          }
+
+          if (xhr.status < 200 || xhr.status >= 300 || data.success === false) {
+            reject(new Error(data.message || "Không thể dịch tài liệu."));
+            return;
+          }
+
+          resolve(data);
+        };
+
+        xhr.onerror = () => {
+          reject(new Error("Không kết nối được backend. Kiểm tra server."));
+        };
+
+        xhr.ontimeout = () => {
+          reject(
+            new Error(
+              "Hết thời gian chờ. Backend có thể vẫn đang xử lý; hãy kiểm tra lịch sử trước khi dịch lại.",
+            ),
+          );
+        };
+
+        xhr.onabort = () => {
+          reject(new Error("Yêu cầu dịch đã bị hủy."));
+        };
+
+        xhr.send(formData);
       });
 
-      const result = await response.json();
+      const data = result.data;
 
-      if (!response.ok) {
-        throw new Error(result.message || "Không thể dịch tài liệu.");
+      if (!data || typeof data.translatedText !== "string") {
+        throw new Error("Backend không trả về nội dung bản dịch hợp lệ.");
       }
 
-      setDocumentTranslating(false);
+      setDocumentTranslationResult(data.translatedText);
+      setDownloadInfo({
+        ...data,
+        fileName: data.fileName || file.name,
+        targetLanguage: data.targetLanguage || targetLanguage,
+      });
+
       setDocumentTranslated(true);
-      setDocumentTranslationResult(result.data?.translatedText || "");
-      setMessage(`Tài liệu "${selectedFile.name}" đã được dịch thành công.`);
-      setDownloadInfo(result.data);
+      setUploadProgress(100);
+      setMessage(`Tài liệu "${file.name}" đã được dịch thành công.`);
+
+      if (!data.historyId) {
+        setError(
+          "Đã dịch xong nhưng backend không trả về historyId nên chưa thể tải file. Kiểm tra phản hồi trong documentController.js.",
+        );
+      }
     } catch (error) {
-      setDocumentTranslating(false);
       setError(error.message || "Không thể dịch tài liệu.");
       setMessage("");
+    } finally {
+      translationInFlight.current = false;
+      setUploading(false);
+      setDocumentTranslating(false);
     }
   }
 
   async function handleDownloadTranslation() {
-    if (!downloadInfo?.historyId || downloading) return;
+    if (
+      !downloadInfo?.historyId ||
+      downloadInFlight.current ||
+      translationInFlight.current
+    ) {
+      return;
+    }
+
+    downloadInFlight.current = true;
     setDownloading(true);
     setError("");
+
     try {
       const response = await fetch(
-        `/api/translations/document/${encodeURIComponent(downloadInfo.historyId)}/download`,
+        `/api/translations/document/${encodeURIComponent(
+          downloadInfo.historyId,
+        )}/download`,
       );
+
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
-        throw new Error(data.message || "Không tải được bản dịch.");
+
+        throw new Error(
+          data.message || `Không tải được bản dịch (${response.status}).`,
+        );
       }
-      const url = URL.createObjectURL(await response.blob());
+
+      const contentType = (response.headers.get("content-type") || "")
+        .split(";")[0]
+        .trim()
+        .toLowerCase();
+
+      let extension;
+
+      if (contentType === "application/pdf") {
+        extension = ".pdf";
+      } else if (
+        contentType ===
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      ) {
+        extension = ".docx";
+      } else {
+        throw new Error("Backend không trả về file PDF hoặc DOCX hợp lệ.");
+      }
+
+      const originalName = downloadInfo.fileName;
+
+      if (!originalName) {
+        throw new Error("Kết quả dịch thiếu tên file gốc.");
+      }
+
+      const matchedExtension = originalName.match(/\.(pdf|docx)$/i);
+      const expectedExtension = matchedExtension
+        ? matchedExtension[0].toLowerCase()
+        : null;
+
+      if (extension !== expectedExtension) {
+        throw new Error(
+          "Backend đang xuất sai định dạng. Kiểm tra hàm downloadDocument: file PDF phải được xuất thành PDF.",
+        );
+      }
+
+      const blob = await response.blob();
+
+      if (!blob.size) {
+        throw new Error("Backend trả về file rỗng.");
+      }
+
+      if (extension === ".pdf" && (await blob.slice(0, 5).text()) !== "%PDF-") {
+        throw new Error("Nội dung nhận được không phải file PDF thực sự.");
+      }
+
+      const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
+
       link.href = url;
       link.download =
-        (downloadInfo.fileName || "document").replace(/\.[^.]+$/, "") +
-        "-" +
-        (downloadInfo.targetLanguage || "translated") +
-        ".docx";
+        originalName.replace(/\.[^.]+$/, "") + "-translated" + extension;
+
       document.body.appendChild(link);
-      link.click();
-      link.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+      try {
+        link.click();
+      } finally {
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 30_000);
+      }
     } catch (error) {
       setError(error.message || "Không tải được bản dịch.");
     } finally {
+      downloadInFlight.current = false;
       setDownloading(false);
     }
   }
@@ -196,13 +359,23 @@ function UploadFileTranslatorPage() {
       <div
         className="absolute inset-0 z-0"
         style={{
+          pointerEvents: "none",
           backgroundImage: `
-        radial-gradient(circle at 30% 70%, rgba(173, 216, 230, 0.35), transparent 60%),
-        radial-gradient(circle at 70% 30%, rgba(255, 182, 193, 0.4), transparent 60%)`,
+            radial-gradient(
+              circle at 30% 70%,
+              rgba(173, 216, 230, 0.35),
+              transparent 60%
+            ),
+            radial-gradient(
+              circle at 70% 30%,
+              rgba(255, 182, 193, 0.4),
+              transparent 60%
+            )
+          `,
         }}
       />
 
-      <main className="translator">
+      <main className="translator" style={{ position: "relative" }}>
         <header className="page-header">
           <h1>Dịch tài liệu</h1>
           <p>Tải lên file DOCX hoặc PDF để dịch sang ngôn ngữ mong muốn.</p>
@@ -213,34 +386,43 @@ function UploadFileTranslatorPage() {
             type="button"
             className="button-primary upload-trigger"
             onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
+            disabled={busy}
           >
             {uploading ? "Đang tải lên..." : "Tải tài liệu lên để dịch"}
           </button>
 
           <div
-            className={`upload-dropzone ${dragOver ? "drag-over" : ""} ${selectedFile ? "has-file" : ""}`}
-            onClick={() => fileInputRef.current?.click()}
+            className={`upload-dropzone ${
+              dragOver ? "drag-over" : ""
+            } ${selectedFile ? "has-file" : ""}`}
+            onClick={() => {
+              if (!busy) fileInputRef.current?.click();
+            }}
             onDragOver={(event) => {
               event.preventDefault();
-              setDragOver(true);
+              if (!busy) setDragOver(true);
             }}
             onDragLeave={() => setDragOver(false)}
             onDrop={handleFileDrop}
             onKeyDown={(event) => {
+              if (event.target !== event.currentTarget || busy) return;
+
               if (event.key === "Enter" || event.key === " ") {
                 event.preventDefault();
                 fileInputRef.current?.click();
               }
             }}
             role="button"
-            tabIndex={0}
+            tabIndex={busy ? -1 : 0}
+            aria-disabled={busy}
           >
             <input
               ref={fileInputRef}
               type="file"
               accept=".docx,.pdf"
               onChange={handleFileChange}
+              onClick={(event) => event.stopPropagation()}
+              disabled={busy}
               hidden
             />
 
@@ -263,6 +445,7 @@ function UploadFileTranslatorPage() {
                     <div className="file-name-wrap">
                       <strong>{selectedFile.name}</strong>
                     </div>
+
                     <div className="file-meta-row">
                       <span>
                         {selectedFile.name.split(".").pop()?.toUpperCase() ||
@@ -276,6 +459,7 @@ function UploadFileTranslatorPage() {
                     <button
                       type="button"
                       className="button-secondary small-button"
+                      disabled={busy}
                       onClick={(event) => {
                         event.stopPropagation();
                         fileInputRef.current?.click();
@@ -283,9 +467,11 @@ function UploadFileTranslatorPage() {
                     >
                       Thay đổi
                     </button>
+
                     <button
                       type="button"
                       className="button-secondary small-button"
+                      disabled={busy}
                       onClick={handleRemoveFile}
                     >
                       Xóa
@@ -296,15 +482,22 @@ function UploadFileTranslatorPage() {
                 <div className="upload-status-row">
                   <span>
                     {uploading
-                      ? "Đang tải lên..."
-                      : uploaded
-                        ? "Tải lên thành công"
-                        : "Chưa tải lên"}
+                      ? "Đang gửi file..."
+                      : uploadProgress === 100
+                        ? "Đã gửi file lên server"
+                        : "Đã chọn tài liệu"}
                   </span>
                   <span>{uploadProgress}%</span>
                 </div>
 
-                <div className="progress-bar" aria-label="Tiến độ upload">
+                <div
+                  className="progress-bar"
+                  role="progressbar"
+                  aria-label="Tiến độ gửi tài liệu"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={uploadProgress}
+                >
                   <span style={{ width: `${uploadProgress}%` }} />
                 </div>
               </div>
@@ -315,23 +508,20 @@ function UploadFileTranslatorPage() {
             <div className="document-action-row">
               <div className="document-language-picker">
                 <label htmlFor="document-target-language">Ngôn ngữ đích</label>
+
                 <select
                   id="document-target-language"
                   value={documentTargetLanguage}
-                  onChange={(event) => {
-                    setDocumentTargetLanguage(event.target.value);
-                    setDocumentTranslated(false);
-                    setDocumentTranslationResult(null);
-                    setError("");
-                    setMessage("");
-                  }}
-                  disabled={documentTranslating}
+                  onChange={handleLanguageChange}
+                  disabled={busy}
                 >
-                  {languages.map((language) => (
-                    <option key={language.code} value={language.code}>
-                      {language.name}
-                    </option>
-                  ))}
+                  {languages
+                    .filter((language) => language.code !== "auto")
+                    .map((language) => (
+                      <option key={language.code} value={language.code}>
+                        {language.name}
+                      </option>
+                    ))}
                 </select>
               </div>
 
@@ -339,39 +529,41 @@ function UploadFileTranslatorPage() {
                 type="button"
                 className="button-primary start-button"
                 onClick={handleStartDocumentTranslation}
-                disabled={documentTranslating}
+                disabled={busy}
               >
                 {documentTranslating
                   ? "Đang dịch tài liệu..."
                   : documentTranslated
-                    ? "Đã dịch xong"
+                    ? "Dịch lại tài liệu"
                     : "Bắt đầu dịch"}
               </button>
             </div>
           )}
 
-          {documentTranslated && documentTranslationResult && (
+          {documentTranslated && (
             <div className="document-result-panel">
               <div className="document-result-header">
                 <h3>Kết quả dịch</h3>
-                <span>{selectedFile?.name || "Tài liệu"}</span>
+                <span>
+                  {downloadInfo?.fileName || selectedFile?.name || "Tài liệu"}
+                </span>
               </div>
 
               <textarea
                 className="document-result-text"
                 value={documentTranslationResult}
+                aria-label="Nội dung bản dịch tài liệu"
                 readOnly
               />
-              {documentTranslated && downloadInfo?.historyId && (
-                <button
-                  type="button"
-                  className="button-primary"
-                  onClick={handleDownloadTranslation}
-                  disabled={downloading}
-                >
-                  {downloading ? "Đang tạo file..." : "Tải tài liệu đã dịch"}
-                </button>
-              )}
+
+              <button
+                type="button"
+                className="button-primary"
+                onClick={handleDownloadTranslation}
+                disabled={downloading || !downloadInfo?.historyId}
+              >
+                {downloading ? "Đang tạo file..." : "Tải tài liệu đã dịch"}
+              </button>
             </div>
           )}
         </section>

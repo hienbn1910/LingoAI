@@ -7,6 +7,7 @@ import TranslationHistory from '../models/TranslationHistory.js';
 import { extractDocument, exportDocument } from '../services/documentService.js';
 import { translateDocument } from '../services/documentLlmService.js';
 import { exportDocxWithOriginalLayout } from "../services/docxLayoutService.js";
+import { exportTranslatedPdf } from "../services/pdfExportService.js";
 
 const uploadDir = fileURLToPath(new URL('../uploads/', import.meta.url));
 const supported = new Set(['vi', 'en', 'ja', 'ko', 'zh', 'fr', 'de', 'es']);
@@ -72,29 +73,46 @@ export async function downloadDocument(req, res) {
             "Không tìm thấy bản dịch có cấu trúc. Hãy dịch lại tài liệu.",
         });
     }
-    let buffer;
-    if (doc.fileName?.toLowerCase().endsWith(".docx")) {
-      if (!doc.filePath)
-        return res
-          .status(404)
-          .json({ success: false, message: "Không còn đường dẫn file gốc." });
-      const savedName = path.basename(doc.filePath.replace(/\\/g, "/"));
-      const originalBuffer = await fs.readFile(path.join(uploadDir, savedName));
-      buffer = await exportDocxWithOriginalLayout(
-        originalBuffer,
-        doc.documentBlocks,
-      );
-    } else {
-      // PDF input still uses the existing basic DOCX exporter.
-      buffer = await exportDocument(doc.documentBlocks);
+    const extension = path.extname(doc.fileName || "").toLowerCase();
+    if (![".docx", ".pdf"].includes(extension)) {
+      return res
+        .status(415)
+        .json({ success: false, message: "Chỉ hỗ trợ DOCX và PDF." });
     }
+    if (!doc.filePath)
+      return res
+        .status(404)
+        .json({ success: false, message: "Không còn đường dẫn file gốc." });
+    const savedName = path.basename(doc.filePath.replace(/\\/g, "/"));
+    const originalBuffer = await fs.readFile(path.join(uploadDir, savedName));
+    const buffer =
+      extension === ".docx"
+        ? await exportDocxWithOriginalLayout(originalBuffer, doc.documentBlocks)
+        : await exportTranslatedPdf(
+            doc.documentBlocks,
+            originalBuffer,
+            doc.targetLanguage,
+          );
+    const basename = path.basename(
+      (doc.fileName || "document").replace(/\\/g, "/"),
+    );
+    const name =
+      basename.slice(0, -extension.length).replace(/[\r\n\x00-\x1f]/g, "") +
+      "-translated" +
+      extension;
+    const encoded = encodeURIComponent(name).replace(
+      /['()*]/g,
+      (char) => "%" + char.charCodeAt(0).toString(16).toUpperCase(),
+    );
     res.setHeader(
       "Content-Type",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      extension === ".pdf"
+        ? "application/pdf"
+        : "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     );
     res.setHeader(
       "Content-Disposition",
-      'attachment; filename="translation.docx"',
+      `attachment; filename="translation${extension}"; filename*=UTF-8''${encoded}`,
     );
     res.setHeader("Cache-Control", "no-store");
     return res.send(buffer);
@@ -109,7 +127,7 @@ export async function downloadDocument(req, res) {
             ? "Không còn file gốc trên server. Hãy tải lên và dịch lại tài liệu."
             : error.status === 409
               ? error.message
-              : "Không xuất được bản dịch. Kiểm tra log backend.",
+              : "Không xuất được bản dịch. Kiểm tra log backend và cài đặt Chromium.",
       });
   }
 }

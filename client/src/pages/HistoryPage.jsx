@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import TranslationAssistant from "../components/TranslationAssistant";
 
 const panel = {
@@ -8,12 +8,7 @@ const panel = {
   overflowWrap: "anywhere",
   fontSize: "0.95rem",
 };
-
-const column = {
-  flex: "1 1 300px",
-  minWidth: 0,
-};
-
+const column = { flex: "1 1 300px", minWidth: 0 };
 const button = {
   padding: "8px 12px",
   border: "1px solid #d1d5db",
@@ -22,31 +17,26 @@ const button = {
   color: "#374151",
   cursor: "pointer",
 };
-
 const formatDate = (value) => new Date(value).toLocaleString("vi-VN");
 
 async function request(url, options) {
   const response = await fetch(url, options);
   const data = await response.json().catch(() => null);
-
   if (!response.ok || data?.success === false) {
     throw new Error(
       data?.message || "Không thể xử lý yêu cầu. Vui lòng thử lại.",
     );
   }
-
   return data;
 }
 
-// Không ghi lại DOM sau mỗi phím để tránh nhảy con trỏ tiếng Việt.
+// React không ghi lại DOM sau mỗi phím, tránh nhảy con trỏ khi nhập tiếng Việt.
 function EditableText({ initialText, disabled, onChange, label }) {
   const element = useRef(null);
   const initial = useRef(initialText);
-
   useEffect(() => {
     element.current.textContent = initial.current;
   }, []);
-
   return (
     <div
       ref={element}
@@ -68,6 +58,66 @@ function EditableText({ initialText, disabled, onChange, label }) {
   );
 }
 
+function FoldText({ text = "", field, background }) {
+  const [expanded, setExpanded] = useState(false);
+  const id = useId();
+  const value = typeof text === "string" ? text : "";
+  const preview = value.slice(0, 650).split("\n").slice(0, 10).join("\n");
+  const long = preview.length < value.length;
+  return (
+    <div className="history-reading">
+      <div
+        id={id}
+        data-ai-field={field}
+        className="history-reading-content"
+        tabIndex={expanded && long ? 0 : undefined}
+        aria-label={
+          field === "originalText" ? "Nội dung bản gốc" : "Nội dung bản dịch"
+        }
+        style={{
+          ...panel,
+          marginTop: 4,
+          background,
+          maxHeight: expanded ? 480 : undefined,
+          overflowY: expanded ? "auto" : undefined,
+        }}
+      >
+        {expanded ? value : preview}
+      </div>
+      {long && (
+        <div className="history-reading-footer">
+          <span>
+            {expanded
+              ? "Cuộn trong khung để đọc và bôi đen"
+              : "Đang hiển thị một phần nội dung"}
+          </span>
+          <button
+            type="button"
+            className="history-expand"
+            aria-expanded={expanded}
+            aria-controls={id}
+            onClick={() => setExpanded((previous) => !previous)}
+          >
+            {expanded ? "Thu gọn" : "Xem thêm"}
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              aria-hidden="true"
+              style={{ transform: expanded ? "rotate(180deg)" : undefined }}
+            >
+              <path d="m6 9 6 6 6-6" />
+            </svg>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function HistoryPage() {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -81,7 +131,6 @@ export default function HistoryPage() {
 
   useEffect(() => {
     let active = true;
-
     request("/api/history")
       .then((data) => {
         if (active) setHistory(data.data || []);
@@ -92,39 +141,32 @@ export default function HistoryPage() {
       .finally(() => {
         if (active) setLoading(false);
       });
-
     return () => {
       active = false;
     };
   }, []);
 
+  // Cảnh báo nếu rời trang bằng reload/đóng tab trong lúc đang sửa.
   useEffect(() => {
     if (!editingId) return;
-
     const warn = (event) => {
       event.preventDefault();
       event.returnValue = "";
     };
-
     window.addEventListener("beforeunload", warn);
-
-    return () => {
-      window.removeEventListener("beforeunload", warn);
-    };
+    return () => window.removeEventListener("beforeunload", warn);
   }, [editingId]);
 
   function startEdit(item) {
     setActiveAssistantId(null);
     setEditingId(item._id);
     setDraft(item.editedText ?? item.translatedText ?? "");
-
     setDraftBlocks(
       (item.documentBlocks || []).map((block) => ({
         id: block.id,
         editedText: block.editedText ?? block.translatedText ?? "",
       })),
     );
-
     setError("");
     setNotice("");
   }
@@ -135,23 +177,18 @@ export default function HistoryPage() {
       !window.confirm(
         "Khôi phục bản dịch AI ban đầu? Phần chỉnh sửa đã lưu sẽ bị bỏ.",
       )
-    ) {
+    )
       return;
-    }
-
     setActiveAssistantId(null);
     setBusy(true);
     setError("");
     setNotice("");
-
     try {
       const data = await request(
         `/api/history/${item._id}/${restore ? "restore" : "content"}`,
         {
           method: restore ? "POST" : "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             revision: item.__v ?? 0,
             ...(!restore &&
@@ -161,11 +198,9 @@ export default function HistoryPage() {
           }),
         },
       );
-
       setHistory((previous) =>
         previous.map((entry) => (entry._id === item._id ? data.data : entry)),
       );
-
       setEditingId(null);
       setNotice(
         restore
@@ -180,20 +215,16 @@ export default function HistoryPage() {
   }
 
   async function remove(id) {
-    if (!window.confirm(id ? "Xóa bản dịch này?" : "Xóa toàn bộ lịch sử?")) {
+    if (!window.confirm(id ? "Xóa bản dịch này?" : "Xóa toàn bộ lịch sử?"))
       return;
-    }
-
     setActiveAssistantId(null);
     setBusy(true);
     setError("");
     setNotice("");
-
     try {
       await request(id ? `/api/history/${id}` : "/api/history", {
         method: "DELETE",
       });
-
       setHistory((previous) =>
         id ? previous.filter((item) => item._id !== id) : [],
       );
@@ -216,55 +247,38 @@ export default function HistoryPage() {
         }}
       >
         <h2>Lịch sử dịch</h2>
-
         {history.length > 0 && (
           <button
             disabled={busy || !!editingId}
             onClick={() => remove()}
-            style={{
-              ...button,
-              background: "#ef4444",
-              color: "white",
-            }}
+            style={{ ...button, background: "#ef4444", color: "white" }}
           >
             Xóa toàn bộ lịch sử
           </button>
         )}
       </div>
-
       {error && (
         <p role="alert" style={{ color: "#b91c1c" }}>
           {error}
         </p>
       )}
-
       {notice && (
         <p role="status" style={{ color: "#15803d" }}>
           {notice}
         </p>
       )}
-
       {loading ? (
         <p>Đang tải...</p>
       ) : !history.length ? (
         <p>Chưa có lịch sử dịch nào.</p>
       ) : (
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 16,
-          }}
-        >
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           {history.map((item) => {
             const editing = editingId === item._id;
-
             const edited =
               item.editedText != null ||
               item.documentBlocks?.some((block) => block.editedText != null);
-
             const content = item.editedText ?? item.translatedText;
-
             return (
               <article
                 data-ai-scope
@@ -297,7 +311,6 @@ export default function HistoryPage() {
                     {item.type?.toUpperCase()}
                     {item.fileName && ` | File: ${item.fileName}`}
                   </span>
-
                   <button
                     style={{ ...button, color: "#dc2626" }}
                     disabled={busy || !!editingId}
@@ -306,33 +319,18 @@ export default function HistoryPage() {
                     Xóa
                   </button>
                 </div>
-
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 20,
-                    flexWrap: "wrap",
-                  }}
-                >
+                <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
                   <div style={column}>
                     <strong>Gốc ({item.sourceLanguage}):</strong>
-
-                    <div
-                      data-ai-field="originalText"
-                      style={{
-                        ...panel,
-                        marginTop: 4,
-                        background: "#f9fafb",
-                      }}
-                    >
-                      {item.originalText}
-                    </div>
+                    <FoldText
+                      text={item.originalText}
+                      field="originalText"
+                      background="#f9fafb"
+                    />
                   </div>
-
                   {typeof content === "string" && (
                     <div style={column}>
                       <strong>Bản dịch ({item.targetLanguage}):</strong>
-
                       {edited && (
                         <p
                           style={{
@@ -347,7 +345,6 @@ export default function HistoryPage() {
                             : ""}
                         </p>
                       )}
-
                       {editing ? (
                         <div style={{ marginTop: 8 }}>
                           <div
@@ -377,10 +374,7 @@ export default function HistoryPage() {
                                       setDraftBlocks((previous) =>
                                         previous.map((entry, position) =>
                                           position === index
-                                            ? {
-                                                ...entry,
-                                                editedText: value,
-                                              }
+                                            ? { ...entry, editedText: value }
                                             : entry,
                                         ),
                                       )
@@ -397,13 +391,8 @@ export default function HistoryPage() {
                               />
                             )}
                           </div>
-
                           <div
-                            style={{
-                              display: "flex",
-                              gap: 8,
-                              marginTop: 8,
-                            }}
+                            style={{ display: "flex", gap: 8, marginTop: 8 }}
                           >
                             <button
                               style={{
@@ -416,7 +405,6 @@ export default function HistoryPage() {
                             >
                               {busy ? "Đang lưu..." : "Lưu thay đổi"}
                             </button>
-
                             <button
                               style={button}
                               disabled={busy}
@@ -431,17 +419,12 @@ export default function HistoryPage() {
                         </div>
                       ) : (
                         <>
-                          <div
-                            data-ai-field="translatedText"
-                            style={{
-                              ...panel,
-                              marginTop: 4,
-                              background: "#f3f4f6",
-                            }}
-                          >
-                            {content}
-                          </div>
-
+                          <FoldText
+                            key={item.__v ?? content}
+                            text={content}
+                            field="translatedText"
+                            background="#f3f4f6"
+                          />
                           <div
                             style={{
                               display: "flex",
@@ -457,7 +440,6 @@ export default function HistoryPage() {
                             >
                               Chỉnh sửa
                             </button>
-
                             {edited && (
                               <button
                                 style={button}
@@ -473,7 +455,6 @@ export default function HistoryPage() {
                     </div>
                   )}
                 </div>
-
                 {!editing && (
                   <TranslationAssistant
                     key={JSON.stringify([

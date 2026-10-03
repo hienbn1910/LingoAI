@@ -4,27 +4,37 @@ import "./TranslationAssistant.css";
 
 const FIRST =
   "Giải thích ngắn gọn ý nghĩa, từ ngữ và ngữ pháp của nội dung đang chọn bằng tiếng Việt.";
-
 const bytes = (value) => new TextEncoder().encode(JSON.stringify(value)).length;
-
-const box = {
-  padding: 12,
-  background: "#f8fafc",
-  border: "1px solid #ddd6fe",
-  borderRadius: 8,
-  whiteSpace: "pre-wrap",
-  overflowWrap: "anywhere",
-  maxHeight: 180,
-  overflowY: "auto",
-};
+function Icon({ name }) {
+  const paths = {
+    plus: "M12 5v14M5 12h14",
+    send: "m22 2-7 20-4-9-9-4 20-7ZM22 2 11 13",
+    stop: "M7 7h10v10H7z",
+    change: "M4 7h15m-4-4 4 4-4 4M20 17H5m4-4-4 4 4 4",
+    spark: "m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3Z",
+  };
+  return (
+    <svg
+      width="19"
+      height="19"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d={paths[name]} />
+    </svg>
+  );
+}
 
 const fieldOf = (element) =>
   element?.dataset.aiField ||
-  {
-    "source-text": "originalText",
-    "translated-text": "translatedText",
-  }[element?.id];
-
+  { "source-text": "originalText", "translated-text": "translatedText" }[
+    element?.id
+  ];
 const zoneSelector =
   "[data-ai-field], textarea#source-text, textarea#translated-text";
 
@@ -37,7 +47,6 @@ export default function TranslationAssistant({
   const id = useId();
   const root = useRef(null);
   const request = useRef(null);
-
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState(null);
   const [candidate, setCandidate] = useState(null);
@@ -47,13 +56,9 @@ export default function TranslationAssistant({
   const [error, setError] = useState("");
   const [note, setNote] = useState("");
   const [retry, setRetry] = useState(null);
-
   const contextKey = JSON.stringify(context);
-
   const valid =
     !!context?.originalText?.trim() && !!context?.translatedText?.trim();
-
-  // Ngưỡng tự giải thích của giao diện, không phải giới hạn model.
   const short =
     valid &&
     context.originalText.length <= 1200 &&
@@ -76,7 +81,6 @@ export default function TranslationAssistant({
     setRetry(null);
   }
 
-  // Nội dung bản dịch thay đổi thì bỏ ngữ cảnh cũ.
   useEffect(() => {
     cancel();
     setOpen(false);
@@ -90,10 +94,8 @@ export default function TranslationAssistant({
     setRetry(null);
   }, [contextKey]);
 
-  // Chỉ một chatbot hoạt động trong trang lịch sử.
   useEffect(() => {
     if (active) return;
-
     cancel();
     setOpen(false);
     setSelected(null);
@@ -108,24 +110,19 @@ export default function TranslationAssistant({
 
   useEffect(() => {
     if (!open || !valid || disabled) return;
-
     const scope = root.current?.closest("[data-ai-scope], article, main");
-
     if (!scope) return;
 
     function capture(event) {
-      // Không mất đoạn đã chọn khi tương tác với chatbot.
+      // Clicking chatbot controls must not erase the saved selection.
       if (
         root.current?.contains(event.target) ||
         root.current?.contains(document.activeElement)
-      ) {
+      )
         return;
-      }
-
       const element = document.activeElement;
       let zone;
       let text = "";
-
       if (
         element?.matches(zoneSelector) &&
         element.tagName === "TEXTAREA" &&
@@ -138,19 +135,13 @@ export default function TranslationAssistant({
         );
       } else {
         const selection = window.getSelection();
-
         if (!selection?.rangeCount) return;
-
         const range = selection.getRangeAt(0);
-
         const start =
           range.startContainer.nodeType === 1
             ? range.startContainer
             : range.startContainer.parentElement;
-
         zone = start?.closest(zoneSelector);
-
-        // Không nhận lựa chọn kéo qua hai cột hoặc bản dịch khác.
         if (
           !zone ||
           !scope.contains(zone) ||
@@ -159,13 +150,10 @@ export default function TranslationAssistant({
           setCandidate(null);
           return;
         }
-
         text = selection.toString();
       }
-
       const field = fieldOf(zone);
       text = text.trim();
-
       if (
         !text ||
         !["originalText", "translatedText"].includes(field) ||
@@ -174,14 +162,11 @@ export default function TranslationAssistant({
         setCandidate(null);
         return;
       }
-
       setCandidate({ field, text });
     }
-
     document.addEventListener("pointerup", capture);
     document.addEventListener("keyup", capture);
     document.addEventListener("selectionchange", capture);
-
     return () => {
       document.removeEventListener("pointerup", capture);
       document.removeEventListener("keyup", capture);
@@ -190,109 +175,65 @@ export default function TranslationAssistant({
   }, [open, valid, disabled, contextKey]);
 
   async function ask(question, history = messages, chosen = selected) {
-    if (
-      disabled ||
-      request.current ||
-      !chosen ||
-      !question.trim() ||
-      question.length > 1000
-    ) {
-      return;
-    }
-
+    if (disabled || request.current || !chosen || !question.trim()) return;
+    if (question.length > 1000) return;
     const controller = new AbortController();
     request.current = controller;
-
     setBusy(true);
     setError("");
     setNote("");
     setRetry(null);
-
     const prefix = [...history, { role: "user", content: question.trim() }];
-
     let answer = "";
     const past = [];
-
-    // Chỉ gửi những cặp hỏi–đáp đã hoàn thành.
     for (let i = 0; i + 1 < history.length; i += 2) {
-      if (history[i + 1].complete) {
-        past.push(history[i], history[i + 1]);
-      }
+      if (history[i + 1].complete) past.push(history[i], history[i + 1]);
     }
-
     setMessages([
       ...prefix,
       { role: "assistant", content: "", complete: false },
     ]);
-
     try {
       await streamExplanation(
         {
           context: chosen,
           question: question.trim(),
-          history: past.slice(-12).map(({ role, content }) => ({
-            role,
-            content,
-          })),
+          history: past
+            .slice(-12)
+            .map(({ role, content }) => ({ role, content })),
         },
         controller.signal,
         (event) => {
-          if (request.current !== controller || controller.signal.aborted) {
+          if (request.current !== controller || controller.signal.aborted)
             return;
-          }
-
           if (event.type === "token") {
             answer += event.text;
-
             setMessages([
               ...prefix,
-              {
-                role: "assistant",
-                content: answer,
-                complete: false,
-              },
+              { role: "assistant", content: answer, complete: false },
             ]);
           }
-
           if (event.type === "done") {
             setMessages([
               ...prefix,
-              {
-                role: "assistant",
-                content: answer,
-                complete: true,
-              },
+              { role: "assistant", content: answer, complete: true },
             ]);
-
-            if (event.truncated) {
+            if (event.truncated)
               setNote("Phản hồi đạt giới hạn độ dài. Bạn có thể hỏi tiếp.");
-            }
           }
-
-          if (event.type === "meta" && event.dropped) {
+          if (event.type === "meta" && event.dropped)
             setNote("AI chỉ nhận các lượt gần đây để giới hạn ngữ cảnh.");
-          }
         },
       );
     } catch (err) {
       if (request.current !== controller) return;
-
-      // Không để lại bong bóng trống khi API thất bại.
+      // A failed empty response does not leave an empty bubble.
       setMessages(
         answer
-          ? [
-              ...prefix,
-              {
-                role: "assistant",
-                content: answer,
-                complete: false,
-              },
-            ]
+          ? [...prefix, { role: "assistant", content: answer, complete: false }]
           : history,
       );
-
       setError(controller.signal.aborted ? "Đã dừng phản hồi." : err.message);
-
       setRetry({ question, history });
     } finally {
       if (request.current === controller) {
@@ -304,18 +245,12 @@ export default function TranslationAssistant({
 
   function start() {
     if (!valid || disabled) return;
-
     clearChat();
     onActivate?.();
-
     setOpen(true);
     setCandidate(null);
-
     const chosen = short ? { ...context, mode: "pair" } : null;
-
     setSelected(chosen);
-
-    // Nội dung dài chỉ mở chatbot, chưa gửi yêu cầu.
     if (chosen) ask(FIRST, [], chosen);
   }
 
@@ -324,12 +259,9 @@ export default function TranslationAssistant({
       !candidate ||
       candidate.text.length > 1200 ||
       bytes(candidate.text) > 5000
-    ) {
+    )
       return;
-    }
-
     clearChat();
-
     setSelected({
       mode: "excerpt",
       originalText: candidate.field === "originalText" ? candidate.text : "",
@@ -338,63 +270,71 @@ export default function TranslationAssistant({
       sourceLanguage: context.sourceLanguage || "auto",
       targetLanguage: context.targetLanguage,
     });
-
     setCandidate(null);
-
-    // Chờ người dùng gửi câu hỏi; chưa gọi API tại đây.
+    // Selecting text does not call the API.
   }
 
   const blocked = disabled || busy || !selected;
-
   return (
     <section className="translation-assistant" ref={root}>
       <button
         type="button"
-        className="button-secondary"
+        className="ta-toggle"
         disabled={disabled || !valid}
-        onClick={() => {
-          if (open) {
-            setOpen(false);
-          } else if (selected) {
-            onActivate?.();
-            setOpen(true);
-          } else {
-            start();
-          }
-        }}
+        aria-expanded={open}
+        onClick={() =>
+          open
+            ? setOpen(false)
+            : selected
+              ? (onActivate?.(), setOpen(true))
+              : start()
+        }
       >
-        {open ? "Ẩn AI giải thích" : "✨ AI giải thích"}
+        <Icon name="spark" />
+        {open ? "Ẩn AI giải thích" : "AI giải thích"}
       </button>
-
       {open && (
         <div className="ta-panel">
           <div className="ta-header">
-            <strong>Trợ lý giải thích bản dịch</strong>
-
-            <button type="button" disabled={disabled || busy} onClick={start}>
-              Cuộc trò chuyện mới
+            <div className="ta-heading">
+              <span className="ta-avatar">
+                <Icon name="spark" />
+              </span>
+              <div>
+                <strong>Trợ lý bản dịch</strong>
+                <span className="ta-subtitle">
+                  Hỏi sâu hơn về đoạn bạn chọn
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="ta-icon-button"
+              title="Cuộc trò chuyện mới"
+              aria-label="Cuộc trò chuyện mới"
+              disabled={disabled || busy}
+              onClick={start}
+            >
+              <Icon name="plus" />
             </button>
           </div>
-
           <p className="ta-muted">
             Bôi đen trong bản gốc hoặc bản dịch, rồi bấm “Hỏi AI về đoạn này”.
           </p>
-
           {candidate && (
-            <div style={box}>
+            <div className="ta-context">
               <strong>
                 {candidate.field === "originalText"
                   ? "Đoạn gốc được bôi đen"
                   : "Đoạn dịch được bôi đen"}
               </strong>
-
-              <p>
+              <p className="ta-context-text">
                 {candidate.text.slice(0, 1200)}
                 {candidate.text.length > 1200 ? "…" : ""}
               </p>
-
               <button
                 type="button"
+                className="ta-select-button"
                 disabled={
                   disabled ||
                   candidate.text.length > 1200 ||
@@ -404,15 +344,13 @@ export default function TranslationAssistant({
               >
                 Hỏi AI về đoạn này
               </button>
-
               {candidate.text.length > 1200 && (
                 <p role="status">Hãy chọn tối đa 1.200 ký tự mỗi lần.</p>
               )}
             </div>
           )}
-
           {selected ? (
-            <div style={box}>
+            <div className="ta-context">
               <strong>
                 {selected.mode === "pair"
                   ? "Đang hỏi về bản dịch ngắn"
@@ -420,19 +358,19 @@ export default function TranslationAssistant({
                     ? "Đang hỏi về đoạn gốc"
                     : "Đang hỏi về đoạn dịch"}
               </strong>
-
-              <p>{selected.originalText || selected.translatedText}</p>
-
+              <p className="ta-context-text">
+                {selected.originalText || selected.translatedText}
+              </p>
               {selected.mode === "excerpt" && (
                 <small>
                   Chỉ gửi đoạn này. Chưa có cặp gốc–dịch để đối chiếu độ chính
                   xác.
                 </small>
               )}
-
               <div>
                 <button
                   type="button"
+                  className="ta-change-button"
                   disabled={disabled}
                   onClick={() => {
                     clearChat();
@@ -440,6 +378,7 @@ export default function TranslationAssistant({
                     setCandidate(null);
                   }}
                 >
+                  <Icon name="change" />
                   Chọn đoạn khác
                 </button>
               </div>
@@ -449,29 +388,23 @@ export default function TranslationAssistant({
               Hãy chọn một đoạn để bắt đầu. Chưa có yêu cầu nào được gửi đến AI.
             </p>
           )}
-
           <div className="ta-messages" aria-label="Cuộc trò chuyện">
             {messages.map((message, index) => (
               <div key={index} className={`ta-message ta-${message.role}`}>
                 <strong>{message.role === "user" ? "Bạn" : "AI"}</strong>
-
                 <div>{message.content || "Đang chờ AI…"}</div>
-
                 {!busy && message.role === "assistant" && !message.complete && (
                   <small>Phản hồi chưa hoàn thành</small>
                 )}
               </div>
             ))}
           </div>
-
           {note && <p className="ta-muted">{note}</p>}
-
           {error && (
             <p role="alert" className="ta-error">
               {error}
             </p>
           )}
-
           {retry && (
             <button
               type="button"
@@ -481,7 +414,6 @@ export default function TranslationAssistant({
               Thử lại câu hỏi vừa rồi
             </button>
           )}
-
           <div className="ta-suggestions">
             {[
               "Giải thích đoạn này.",
@@ -498,12 +430,10 @@ export default function TranslationAssistant({
               </button>
             ))}
           </div>
-
           <form
             className="ta-form"
             onSubmit={(event) => {
               event.preventDefault();
-
               if (!blocked && input.trim()) {
                 ask(input);
                 setInput("");
@@ -511,7 +441,6 @@ export default function TranslationAssistant({
             }}
           >
             <label htmlFor={id}>Câu hỏi của bạn</label>
-
             <textarea
               id={id}
               rows={3}
@@ -521,17 +450,27 @@ export default function TranslationAssistant({
               onChange={(event) => setInput(event.target.value)}
               placeholder="Bạn muốn tìm hiểu gì về đoạn này?"
             />
-
             <div className="ta-actions">
               <span>{input.length}/1.000 ký tự</span>
-
               {busy ? (
-                <button type="button" onClick={() => request.current?.abort()}>
-                  Dừng
+                <button
+                  type="button"
+                  className="ta-icon-button ta-stop"
+                  title="Dừng phản hồi"
+                  aria-label="Dừng phản hồi"
+                  onClick={() => request.current?.abort()}
+                >
+                  <Icon name="stop" />
                 </button>
               ) : (
-                <button type="submit" disabled={blocked || !input.trim()}>
-                  Gửi câu hỏi
+                <button
+                  type="submit"
+                  className="ta-icon-button ta-send"
+                  title="Gửi câu hỏi"
+                  aria-label="Gửi câu hỏi"
+                  disabled={blocked || !input.trim()}
+                >
+                  <Icon name="send" />
                 </button>
               )}
             </div>

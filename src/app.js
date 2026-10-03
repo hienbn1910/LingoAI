@@ -8,6 +8,7 @@ import ocrRoutes from "./routes/ocrRoutes.js"; // <-- Thêm import route OCR
 import historyRoutes from "./routes/historyRoutes.js";
 import documentRoutes from "./routes/documentRoutes.js";
 import historyEditRoutes from "./routes/historyEditRoutes.js";
+import explanationRoutes from "./routes/explanationRoutes.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,6 +20,7 @@ const app = express();
 
 app.use(cors()); // <--- 2. Kích hoạt cors middleware cho phép mọi nguồn gọi vào
 app.use(express.json({ limit: "100kb" }));
+app.use("/api/explanations", explanationRoutes);
 app.use("/uploads", express.static(uploadsDir));
 
 app.get("/api/health", (req, res) => {

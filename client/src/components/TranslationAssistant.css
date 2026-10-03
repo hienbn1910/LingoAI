@@ -1,0 +1,120 @@
+.translation-assistant {
+    margin-top: 20px;
+    position: relative;
+}
+
+.translation-assistant button:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+.ta-panel {
+    margin-top: 12px;
+    padding: 20px;
+    background: #fff;
+    border: 1px solid #ddd6fe;
+    border-radius: 16px;
+    color: #172033;
+}
+
+.ta-header,
+.ta-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+}
+
+.ta-muted {
+    font-size: .85rem;
+    color: #64748b;
+}
+
+.ta-warning {
+    padding: 12px;
+    background: #fffbeb;
+    color: #92400e;
+    border-radius: 8px;
+}
+
+.ta-error {
+    color: #b91c1c;
+}
+
+.ta-messages {
+    max-height: 420px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    margin: 14px 0;
+}
+
+.ta-message {
+    padding: 12px 14px;
+    margin: 10px 0;
+    border-radius: 10px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    line-height: 1.65;
+}
+
+.ta-message strong {
+    display: block;
+    margin-bottom: 4px;
+}
+
+.ta-user {
+    background: #eef2ff;
+    margin-left: 8%;
+}
+
+.ta-assistant {
+    background: #f8fafc;
+    margin-right: 8%;
+}
+
+.ta-suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 14px 0;
+}
+
+.ta-suggestions button {
+    border: 1px solid #ddd6fe;
+    border-radius: 16px;
+    padding: 7px 12px;
+    background: #faf5ff;
+    color: #5b21b6;
+    cursor: pointer;
+}
+
+.ta-form {
+    display: grid;
+    gap: 10px;
+}
+
+.ta-form textarea {
+    width: 100%;
+    min-height: 80px;
+    box-sizing: border-box;
+    padding: 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    resize: vertical;
+    font: inherit;
+    color: inherit;
+    background: #fff;
+}
+
+@media(max-width:600px) {
+    .ta-panel {
+        padding: 12px
+    }
+
+    .ta-user,
+    .ta-assistant {
+        margin-left: 0;
+        margin-right: 0
+    }
+}

@@ -1,3 +1,4 @@
+import { Button } from "./ui/button";
 import { useEffect, useId, useRef, useState } from "react";
 import { streamExplanation } from "../services/explanationApi";
 import "./TranslationAssistant.css";
@@ -122,7 +123,7 @@ export default function TranslationAssistant({
         return;
       const element = document.activeElement;
       let zone;
-      let text = "";
+      let text;
       if (
         element?.matches(zoneSelector) &&
         element.tagName === "TEXTAREA" &&
@@ -277,7 +278,7 @@ export default function TranslationAssistant({
   const blocked = disabled || busy || !selected;
   return (
     <section className="translation-assistant" ref={root}>
-      <button
+      <Button variant="outline"
         type="button"
         className="ta-toggle"
         disabled={disabled || !valid}
@@ -292,7 +293,7 @@ export default function TranslationAssistant({
       >
         <Icon name="spark" />
         {open ? "Ẩn AI giải thích" : "AI giải thích"}
-      </button>
+      </Button>
       {open && (
         <div className="ta-panel">
           <div className="ta-header">
@@ -307,7 +308,7 @@ export default function TranslationAssistant({
                 </span>
               </div>
             </div>
-            <button
+            <Button variant="outline"
               type="button"
               className="ta-icon-button"
               title="Cuộc trò chuyện mới"
@@ -316,7 +317,7 @@ export default function TranslationAssistant({
               onClick={start}
             >
               <Icon name="plus" />
-            </button>
+            </Button>
           </div>
           <p className="ta-muted">
             Bôi đen trong bản gốc hoặc bản dịch, rồi bấm “Hỏi AI về đoạn này”.
@@ -332,7 +333,7 @@ export default function TranslationAssistant({
                 {candidate.text.slice(0, 1200)}
                 {candidate.text.length > 1200 ? "…" : ""}
               </p>
-              <button
+              <Button variant="outline"
                 type="button"
                 className="ta-select-button"
                 disabled={
@@ -343,7 +344,7 @@ export default function TranslationAssistant({
                 onClick={useSelection}
               >
                 Hỏi AI về đoạn này
-              </button>
+              </Button>
               {candidate.text.length > 1200 && (
                 <p role="status">Hãy chọn tối đa 1.200 ký tự mỗi lần.</p>
               )}
@@ -368,7 +369,7 @@ export default function TranslationAssistant({
                 </small>
               )}
               <div>
-                <button
+                <Button variant="outline"
                   type="button"
                   className="ta-change-button"
                   disabled={disabled}
@@ -380,7 +381,7 @@ export default function TranslationAssistant({
                 >
                   <Icon name="change" />
                   Chọn đoạn khác
-                </button>
+                </Button>
               </div>
             </div>
           ) : (
@@ -406,13 +407,13 @@ export default function TranslationAssistant({
             </p>
           )}
           {retry && (
-            <button
+            <Button variant="outline"
               type="button"
               disabled={blocked}
               onClick={() => ask(retry.question, retry.history)}
             >
               Thử lại câu hỏi vừa rồi
-            </button>
+            </Button>
           )}
           <div className="ta-suggestions">
             {[
@@ -420,14 +421,14 @@ export default function TranslationAssistant({
               "Giải thích từ khó trong đoạn này.",
               "Cho một ví dụ dễ hiểu.",
             ].map((question) => (
-              <button
+              <Button variant="outline"
                 key={question}
                 type="button"
                 disabled={blocked}
                 onClick={() => ask(question)}
               >
                 {question}
-              </button>
+              </Button>
             ))}
           </div>
           <form
@@ -453,7 +454,7 @@ export default function TranslationAssistant({
             <div className="ta-actions">
               <span>{input.length}/1.000 ký tự</span>
               {busy ? (
-                <button
+                <Button variant="outline"
                   type="button"
                   className="ta-icon-button ta-stop"
                   title="Dừng phản hồi"
@@ -461,9 +462,9 @@ export default function TranslationAssistant({
                   onClick={() => request.current?.abort()}
                 >
                   <Icon name="stop" />
-                </button>
+                </Button>
               ) : (
-                <button
+                <Button variant="outline"
                   type="submit"
                   className="ta-icon-button ta-send"
                   title="Gửi câu hỏi"
@@ -471,7 +472,7 @@ export default function TranslationAssistant({
                   disabled={blocked || !input.trim()}
                 >
                   <Icon name="send" />
-                </button>
+                </Button>
               )}
             </div>
           </form>

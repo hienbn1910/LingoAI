@@ -1,9 +1,10 @@
+import { Button } from "../components/ui/button";
 import { useEffect, useId, useRef, useState } from "react";
 import TranslationAssistant from "../components/TranslationAssistant";
 
 const panel = {
   padding: 12,
-  borderRadius: 6,
+  borderRadius: 12,
   whiteSpace: "pre-wrap",
   overflowWrap: "anywhere",
   fontSize: "0.95rem",
@@ -12,7 +13,7 @@ const column = { flex: "1 1 300px", minWidth: 0 };
 const button = {
   padding: "8px 12px",
   border: "1px solid #d1d5db",
-  borderRadius: 6,
+  borderRadius: 12,
   background: "white",
   color: "#374151",
   cursor: "pointer",
@@ -91,7 +92,7 @@ function FoldText({ text = "", field, background }) {
               ? "Cuộn trong khung để đọc và bôi đen"
               : "Đang hiển thị một phần nội dung"}
           </span>
-          <button
+          <Button variant="outline"
             type="button"
             className="history-expand"
             aria-expanded={expanded}
@@ -111,7 +112,7 @@ function FoldText({ text = "", field, background }) {
             >
               <path d="m6 9 6 6 6-6" />
             </svg>
-          </button>
+          </Button>
         </div>
       )}
     </div>
@@ -236,7 +237,7 @@ export default function HistoryPage() {
   }
 
   return (
-    <div style={{ maxWidth: 1000, margin: "0 auto", padding: 20 }}>
+    <div className="history-page">
       <div
         style={{
           display: "flex",
@@ -246,15 +247,15 @@ export default function HistoryPage() {
           marginBottom: 20,
         }}
       >
-        <h2>Lịch sử dịch</h2>
+        <div className="page-header"><span className="eyebrow">GÓC NGÔN NGỮ CỦA BẠN</span><h1>Những bản dịch đã lưu.</h1><p>Xem lại, chỉnh sửa và khám phá ý nghĩa cùng AI.</p></div>
         {history.length > 0 && (
-          <button
+          <Button variant="outline"
             disabled={busy || !!editingId}
             onClick={() => remove()}
             style={{ ...button, background: "#ef4444", color: "white" }}
           >
             Xóa toàn bộ lịch sử
-          </button>
+          </Button>
         )}
       </div>
       {error && (
@@ -280,7 +281,7 @@ export default function HistoryPage() {
               item.documentBlocks?.some((block) => block.editedText != null);
             const content = item.editedText ?? item.translatedText;
             return (
-              <article
+              <article className="history-card"
                 data-ai-scope
                 key={item._id}
                 style={{
@@ -311,13 +312,13 @@ export default function HistoryPage() {
                     {item.type?.toUpperCase()}
                     {item.fileName && ` | File: ${item.fileName}`}
                   </span>
-                  <button
+                  <Button variant="outline"
                     style={{ ...button, color: "#dc2626" }}
                     disabled={busy || !!editingId}
                     onClick={() => remove(item._id)}
                   >
                     Xóa
-                  </button>
+                  </Button>
                 </div>
                 <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
                   <div style={column}>
@@ -394,7 +395,7 @@ export default function HistoryPage() {
                           <div
                             style={{ display: "flex", gap: 8, marginTop: 8 }}
                           >
-                            <button
+                            <Button variant="outline"
                               style={{
                                 ...button,
                                 background: "#4f46e5",
@@ -404,8 +405,8 @@ export default function HistoryPage() {
                               onClick={() => save(item)}
                             >
                               {busy ? "Đang lưu..." : "Lưu thay đổi"}
-                            </button>
-                            <button
+                            </Button>
+                            <Button variant="outline"
                               style={button}
                               disabled={busy}
                               onClick={() => {
@@ -414,7 +415,7 @@ export default function HistoryPage() {
                               }}
                             >
                               Hủy
-                            </button>
+                            </Button>
                           </div>
                         </div>
                       ) : (
@@ -433,21 +434,21 @@ export default function HistoryPage() {
                               marginTop: 12,
                             }}
                           >
-                            <button
+                            <Button variant="outline"
                               style={button}
                               disabled={busy || !!editingId}
                               onClick={() => startEdit(item)}
                             >
                               Chỉnh sửa
-                            </button>
+                            </Button>
                             {edited && (
-                              <button
+                              <Button variant="outline"
                                 style={button}
                                 disabled={busy || !!editingId}
                                 onClick={() => save(item, true)}
                               >
                                 Khôi phục bản ban đầu
-                              </button>
+                              </Button>
                             )}
                           </div>
                         </>

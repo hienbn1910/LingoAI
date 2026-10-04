@@ -1,3 +1,5 @@
+import { Button } from "../components/ui/button";
+import { Copy } from "lucide-react";
 import { useState, useEffect } from "react";
 import LanguageSelect from "../components/LanguageSelect";
 import ImageTranslator from "../components/ImageTranslator";
@@ -141,18 +143,10 @@ function ImageTranslatorPage() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-[#fefcff] relative">
-      <div
-        className="absolute inset-0 z-0"
-        style={{
-          backgroundImage: `
-        radial-gradient(circle at 30% 70%, rgba(173, 216, 230, 0.35), transparent 60%),
-        radial-gradient(circle at 70% 30%, rgba(255, 182, 193, 0.4), transparent 60%)`,
-        }}
-      />
+    <div className="page-surface">
       <main className="translator">
         <header className="page-header">
-          <h1>AI Image Translator</h1>
+          <span className="eyebrow">ĐỌC HIỂU QUA HÌNH ẢNH</span><h1>Dịch từ một hình ảnh.</h1>
           <p>
             Trích xuất và dịch văn bản từ hình ảnh tự động với sự hỗ trợ của AI.
           </p>
@@ -220,14 +214,14 @@ function ImageTranslatorPage() {
               />
 
               <div className="panel-footer">
-                <button
+                <Button variant="outline"
                   type="button"
                   className="button-secondary"
                   onClick={handleCopy}
                   disabled={loading || !translatedText}
                 >
-                  Sao chép
-                </button>
+                  <Copy size={16}/> Sao chép
+                </Button>
               </div>
 
               {detectedLanguage && (
@@ -253,13 +247,13 @@ function ImageTranslatorPage() {
           )}
 
           <div className="form-actions">
-            <button
+            <Button variant="outline"
               type="submit"
               className="button-primary"
               disabled={loading || !selectedImage}
             >
               {loading ? "Đang xử lý..." : "Dịch ảnh"}
-            </button>
+            </Button>
           </div>
         </form>
       </main>

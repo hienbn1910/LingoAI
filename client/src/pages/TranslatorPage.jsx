@@ -1,3 +1,5 @@
+import { Button } from "../components/ui/button";
+import { Copy, Mic, Volume2, X, Sparkles } from "lucide-react";
 import TranslationAssistant from "../components/TranslationAssistant";
 import { useEffect, useState, useCallback } from "react";
 import LanguageSelect from "../components/LanguageSelect";
@@ -145,22 +147,14 @@ function TranslatorPage() {
       : null;
 
   return (
-    <div className="min-h-screen w-full bg-[#fefcff] relative">
-      <div
-        className="absolute inset-0 z-0"
-        style={{
-          pointerEvents: "none",
-          backgroundImage: `
-        radial-gradient(circle at 30% 70%, rgba(173, 216, 230, 0.35), transparent 60%),
-        radial-gradient(circle at 70% 30%, rgba(255, 182, 193, 0.4), transparent 60%)`,
-        }}
-      />
+    <div className="page-surface">
       <main className="translator" style={{ position: "relative" }}>
         <header className="page-header">
-          <h1>LingoAI</h1>
-          <p>Dịch văn bản đa ngôn ngữ với sự hỗ trợ của AI.</p>
+          <span className="eyebrow">TỪ NGỮ KHÔNG BIÊN GIỚI</span><h1>Bạn muốn dịch gì hôm nay?</h1>
+          <p>Diễn đạt tự nhiên. Thấu hiểu ngữ cảnh. Kết nối mọi ngôn ngữ.</p>
         </header>
 
+        <div className="workspace-hint"><span><Sparkles size={15}/> Dịch tự động khi bạn ngừng nhập</span><span>Văn bản · Đa ngôn ngữ</span></div>
         <form onSubmit={(event) => event.preventDefault()}>
           <div className="translation-grid">
             <section className="translation-panel">
@@ -179,6 +173,7 @@ function TranslatorPage() {
               <label htmlFor="source-text">Văn bản cần dịch</label>
 
               <textarea
+                data-ai-field="originalText"
                 id="source-text"
                 value={text}
                 onChange={(event) => {
@@ -195,16 +190,16 @@ function TranslatorPage() {
                   {text.length}/{MAX_TEXT_LENGTH} ký tự
                 </span>
 
-                <button
+                <Button variant="outline"
                   type="button"
                   className="button-secondary"
                   onClick={toggleListening}
                   title="Nói qua micro"
                 >
-                  {isListening ? "🔴 Đang nghe..." : "🎤 Nói"}
-                </button>
+                  <Mic size={16}/>{isListening ? "Đang nghe..." : "Nói"}
+                </Button>
 
-                <button
+                <Button variant="outline"
                   type="button"
                   className="button-secondary"
                   disabled={!text}
@@ -213,8 +208,8 @@ function TranslatorPage() {
                     clearFeedback();
                   }}
                 >
-                  Xóa
-                </button>
+                  <X size={16}/> Xóa
+                </Button>
               </div>
             </section>
 
@@ -233,6 +228,7 @@ function TranslatorPage() {
               <label htmlFor="translated-text">Bản dịch</label>
 
               <textarea
+                data-ai-field="translatedText"
                 id="translated-text"
                 value={translatedText}
                 readOnly
@@ -240,24 +236,24 @@ function TranslatorPage() {
               />
 
               <div className="panel-footer">
-                <button
+                <Button variant="outline"
                   type="button"
                   className="button-secondary"
                   onClick={() => speak(translatedText, targetLanguage)}
                   disabled={loading || !translatedText || isSpeaking}
                   title="Nghe phát âm"
                 >
-                  {isSpeaking ? "🔊 Đang đọc..." : "🔊 Nghe"}
-                </button>
+                  <Volume2 size={16}/>{isSpeaking ? "Đang đọc..." : "Nghe"}
+                </Button>
 
-                <button
+                <Button variant="outline"
                   type="button"
                   className="button-secondary"
                   onClick={handleCopy}
                   disabled={loading || !translatedText}
                 >
-                  Sao chép
-                </button>
+                  <Copy size={16}/> Sao chép
+                </Button>
               </div>
 
               {detectedLanguage && (

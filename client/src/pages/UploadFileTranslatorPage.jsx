@@ -1,3 +1,5 @@
+import { Button } from "../components/ui/button";
+import { UploadCloud, Download } from "lucide-react";
 import { useRef, useState } from "react";
 import { languages } from "../constants/languages";
 
@@ -355,41 +357,22 @@ function UploadFileTranslatorPage() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-[#fefcff] relative">
-      <div
-        className="absolute inset-0 z-0"
-        style={{
-          pointerEvents: "none",
-          backgroundImage: `
-            radial-gradient(
-              circle at 30% 70%,
-              rgba(173, 216, 230, 0.35),
-              transparent 60%
-            ),
-            radial-gradient(
-              circle at 70% 30%,
-              rgba(255, 182, 193, 0.4),
-              transparent 60%
-            )
-          `,
-        }}
-      />
-
+    <div className="page-surface">
       <main className="translator" style={{ position: "relative" }}>
         <header className="page-header">
-          <h1>Dịch tài liệu</h1>
+          <span className="eyebrow">TÀI LIỆU, THÊM MỘT NGÔN NGỮ</span><h1>Mở rộng thế giới tài liệu.</h1>
           <p>Tải lên file DOCX hoặc PDF để dịch sang ngôn ngữ mong muốn.</p>
         </header>
 
         <section className="document-upload-section">
-          <button
+          <Button variant="default"
             type="button"
             className="button-primary upload-trigger"
             onClick={() => fileInputRef.current?.click()}
             disabled={busy}
           >
-            {uploading ? "Đang tải lên..." : "Tải tài liệu lên để dịch"}
-          </button>
+            <UploadCloud size={17}/>{uploading ? "Đang tải lên..." : "Chọn tài liệu"}
+          </Button>
 
           <div
             className={`upload-dropzone ${
@@ -429,7 +412,7 @@ function UploadFileTranslatorPage() {
             {!selectedFile ? (
               <>
                 <div className="upload-icon" aria-hidden="true">
-                  📄
+                  <UploadCloud size={34}/>
                 </div>
 
                 <p className="upload-hint">
@@ -456,7 +439,7 @@ function UploadFileTranslatorPage() {
                   </div>
 
                   <div className="file-actions">
-                    <button
+                    <Button variant="outline"
                       type="button"
                       className="button-secondary small-button"
                       disabled={busy}
@@ -466,16 +449,16 @@ function UploadFileTranslatorPage() {
                       }}
                     >
                       Thay đổi
-                    </button>
+                    </Button>
 
-                    <button
+                    <Button variant="outline"
                       type="button"
                       className="button-secondary small-button"
                       disabled={busy}
                       onClick={handleRemoveFile}
                     >
                       Xóa
-                    </button>
+                    </Button>
                   </div>
                 </div>
 
@@ -525,7 +508,7 @@ function UploadFileTranslatorPage() {
                 </select>
               </div>
 
-              <button
+              <Button variant="outline"
                 type="button"
                 className="button-primary start-button"
                 onClick={handleStartDocumentTranslation}
@@ -536,7 +519,7 @@ function UploadFileTranslatorPage() {
                   : documentTranslated
                     ? "Dịch lại tài liệu"
                     : "Bắt đầu dịch"}
-              </button>
+              </Button>
             </div>
           )}
 
@@ -556,14 +539,14 @@ function UploadFileTranslatorPage() {
                 readOnly
               />
 
-              <button
+              <Button variant="outline"
                 type="button"
                 className="button-primary"
                 onClick={handleDownloadTranslation}
                 disabled={downloading || !downloadInfo?.historyId}
               >
-                {downloading ? "Đang tạo file..." : "Tải tài liệu đã dịch"}
-              </button>
+                <Download size={17}/>{downloading ? "Đang tạo file..." : "Tải tài liệu đã dịch"}
+              </Button>
             </div>
           )}
         </section>

@@ -1,3 +1,5 @@
+import { PencilLine, Save, RotateCcw, X } from "lucide-react";
+import "../components/TranslationActions.css";
 import { Button } from "../components/ui/button";
 import { useEffect, useId, useRef, useState } from "react";
 import TranslationAssistant from "../components/TranslationAssistant";
@@ -393,27 +395,25 @@ export default function HistoryPage() {
                             )}
                           </div>
                           <div
-                            style={{ display: "flex", gap: 8, marginTop: 8 }}
+                            style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}
                           >
                             <Button variant="outline"
-                              style={{
-                                ...button,
-                                background: "#4f46e5",
-                                color: "white",
-                              }}
+                              className="translation-action translation-action-primary"
                               disabled={busy}
                               onClick={() => save(item)}
                             >
+                              <Save size={16} aria-hidden="true" />
                               {busy ? "Đang lưu..." : "Lưu thay đổi"}
                             </Button>
                             <Button variant="outline"
-                              style={button}
+                              className="translation-action translation-action-outline"
                               disabled={busy}
                               onClick={() => {
                                 setEditingId(null);
                                 setError("");
                               }}
                             >
+                              <X size={16} aria-hidden="true" />
                               Hủy
                             </Button>
                           </div>
@@ -434,19 +434,21 @@ export default function HistoryPage() {
                               marginTop: 12,
                             }}
                           >
-                            <Button variant="outline"
-                              style={button}
+                            <Button variant="secondary"
+                              className="translation-action translation-action-soft"
                               disabled={busy || !!editingId}
                               onClick={() => startEdit(item)}
                             >
+                              <PencilLine size={16} aria-hidden="true" />
                               Chỉnh sửa
                             </Button>
                             {edited && (
                               <Button variant="outline"
-                                style={button}
+                                className="translation-action translation-action-outline"
                                 disabled={busy || !!editingId}
                                 onClick={() => save(item, true)}
                               >
+                                <RotateCcw size={16} aria-hidden="true" />
                                 Khôi phục bản ban đầu
                               </Button>
                             )}

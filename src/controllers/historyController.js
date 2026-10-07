@@ -2,6 +2,7 @@ import TranslationHistory from "../models/TranslationHistory.js";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import mongoose from "mongoose";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -38,6 +39,14 @@ export async function clearHistory(req, res) {
 export async function deleteHistoryItem(req, res) {
   try {
     const { id } = req.params;
+    
+    if (!mongoose.isObjectIdOrHexString(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "ID lịch sử không hợp lệ.",
+      });
+    }
+
     const item = await TranslationHistory.findById(id);
     if (!item) {
       return res.status(404).json({ success: false, message: "Không tìm thấy lịch sử." });

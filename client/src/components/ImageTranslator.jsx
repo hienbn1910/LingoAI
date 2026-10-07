@@ -1,4 +1,7 @@
 import { useState, useRef } from "react";
+import { ClipboardPaste, ImagePlus, UploadCloud } from "lucide-react";
+import { Button } from "./ui/button";
+import "./TranslationActions.css";
 
 function ImageTranslator({
   selectedImage,
@@ -97,7 +100,7 @@ function ImageTranslator({
         <div
           className={`image-dropzone transition-all duration-200 cursor-pointer ${
             isDragging
-              ? "border-2 border-dashed border-blue-500 bg-blue-50"
+              ? "image-dropzone-active"
               : ""
           }`}
           onDragOver={handleDragOver}
@@ -105,47 +108,39 @@ function ImageTranslator({
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
         >
-          <div className="text-blue-500 mb-2">
-            <svg
-              className="w-12 h-12 mx-auto"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="1.5"
-                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-              ></path>
-            </svg>
+          <div className="upload-icon-badge" aria-hidden="true">
+            <UploadCloud size={28} strokeWidth={1.7} />
           </div>
           <span className="text-sm font-medium text-gray-700 mb-3">
             {isDragging
               ? "Thả tệp ảnh vào đây..."
               : "Kéo và thả hoặc chọn tệp ảnh"}
           </span>
-          <div className="flex gap-2 w-full max-w-xs">
-            <button
+          <div className="image-upload-actions">
+            <Button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 fileInputRef.current?.click();
               }}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-2 px-3 rounded transition cursor-pointer"
+              className="translation-action translation-action-primary"
             >
+              <ImagePlus size={17} aria-hidden="true" />
               Duyệt tệp
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 if (onPasteClipboard) onPasteClipboard();
               }}
-              className="flex-1 border border-gray-300 hover:bg-gray-50 text-gray-700 text-xs font-semibold py-2 px-3 rounded transition cursor-pointer"
+              variant="outline"
+              className="translation-action translation-action-outline"
+              title="Dán ảnh từ bộ nhớ tạm"
             >
-              Dán từ bộ nhớ tạm
-            </button>
+              <ClipboardPaste size={17} aria-hidden="true" />
+              Dán ảnh
+            </Button>
           </div>
         </div>
       )}

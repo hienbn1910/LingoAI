@@ -1,0 +1,15 @@
+/* Scoped styles for image upload and translation editing actions. */
+.image-upload-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; width: 100%; }
+.upload-icon-badge { display: grid; place-items: center; width: 58px; height: 58px; margin-bottom: 4px; border-radius: 18px; color: #7053de; background: #f0ebff; border: 1px solid #e7defb; }
+.image-dropzone.image-dropzone-active { border-color: #9377e9; background: #f5f0ff; }
+button.translation-action { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; height: auto; padding: 10px 16px; border-radius: 12px; border: 1px solid transparent; font-size: 13px; font-weight: 600; line-height: 1.4; white-space: normal; transition: background-color .18s, border-color .18s, box-shadow .18s; }
+button.translation-action-primary { color: #fff; background: #7053de; border-color: #7053de; box-shadow: 0 4px 10px #7053de24; }
+button.translation-action-primary:hover:not(:disabled) { background: #6142cc; border-color: #6142cc; box-shadow: 0 5px 14px #7053de32; }
+button.translation-action-outline { color: #645879; background: #fff; border-color: #e3dced; }
+button.translation-action-outline:hover:not(:disabled) { background: #faf7ff; border-color: #bba6ef; color: #6847cd; }
+button.translation-action-soft { color: #6847cd; background: #f2edff; border-color: #e5dcfc; }
+button.translation-action-soft:hover:not(:disabled) { background: #e9dfff; border-color: #c9b7f4; }
+button.translation-action:focus-visible { outline: 3px solid #c4b5fd; outline-offset: 3px; }
+button.translation-action:disabled { opacity: .5; cursor: not-allowed; box-shadow: none; }
+button.translation-action svg { width: 17px; height: 17px; flex-shrink: 0; }
+@media (prefers-reduced-motion: reduce) { button.translation-action { transition: none; } }

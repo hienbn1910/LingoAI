@@ -64,6 +64,13 @@ app.use((error, req, res, next) => {
       message: "Dữ liệu gửi lên quá lớn.",
     });
   }
+  
+  if (error.code === "LIMIT_FILE_SIZE") {
+    return res.status(413).json({
+      success: false,
+      message: "File vượt quá dung lượng cho phép.",
+    });
+  }
 
   console.error("Lỗi xử lý API:", error.message);
 

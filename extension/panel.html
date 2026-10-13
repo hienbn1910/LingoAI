@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1"
+    />
+    <title>LingoAI</title>
+    <link rel="stylesheet" href="panel.css" />
+  </head>
+
+  <body>
+    <header>
+      <b>✦ LingoAI</b>
+      <span>Dịch & hiểu ngay khi đọc</span>
+
+      <button
+          id="closePanel"
+          class="close-panel"
+          type="button"
+          title="Đóng LingoAI"
+          aria-label="Đóng LingoAI"
+      >
+          <span aria-hidden="true">×</span>
+      </button>
+    </header>
+
+    <details hidden>
+      <summary>Cài đặt kết nối</summary>
+
+      <label for="base">Địa chỉ backend local</label>
+      <input
+        id="base"
+        value="http://127.0.0.1:5001"
+      />
+
+      <button id="save">Lưu cài đặt</button>
+      <small>
+        Cần bật backend và Ollama trên máy này.
+      </small>
+    </details>
+
+    <div class="languages">
+      <label>
+        Nguồn
+        <select id="source"></select>
+      </label>
+
+      <label>
+        Đích
+        <select id="target"></select>
+      </label>
+    </div>
+
+    <label for="original">Nội dung được chọn</label>
+    <textarea
+      id="original"
+      maxlength="5000"
+      placeholder="Bôi đen trên trang → chuột phải → Dịch với LingoAI"
+    ></textarea>
+
+    <button id="translate" class="primary">
+      Dịch
+    </button>
+
+    <label for="result">Bản dịch</label>
+    <textarea
+      id="result"
+      readonly
+      placeholder="Kết quả sẽ xuất hiện ở đây"
+    ></textarea>
+
+    <div class="actions">
+      <button id="copy" disabled>Sao chép</button>
+      <button id="explain" disabled>
+        ✦ AI giải thích
+      </button>
+    </div>
+
+    <div class="actions">
+      <button id="excerptSource">
+        Hỏi về đoạn chọn ở bản gốc
+      </button>
+
+      <button id="excerptResult">
+        Hỏi về đoạn chọn ở bản dịch
+      </button>
+    </div>
+
+    <small>
+      Đoạn dài: chọn tối đa 1.200 ký tự trong một ô trên
+      rồi bấm nút tương ứng.
+    </small>
+
+    <p
+      id="status"
+      role="status"
+      aria-live="polite"
+    ></p>
+
+    <section id="chat" hidden>
+      <div class="actions">
+        <b>Trợ lý AI</b>
+        <button id="reset">
+          Cuộc trò chuyện mới
+        </button>
+      </div>
+
+      <p id="contextNote"></p>
+      <div id="messages"></div>
+
+      <form id="form">
+        <label for="question">Câu hỏi</label>
+        <textarea
+          id="question"
+          maxlength="1000"
+          placeholder="Bạn muốn hiểu thêm điều gì?"
+        ></textarea>
+
+        <div class="actions">
+          <button id="send" class="primary">
+            Gửi câu hỏi
+          </button>
+
+          <button
+            id="stop"
+            type="button"
+            disabled
+          >
+            Dừng
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <script type="module" src="panel.js"></script>
+  </body>
+</html>

@@ -1,377 +1,255 @@
 # LingoAI
 
-Ứng dụng dịch thuật đa ngôn ngữ tích hợp AI, sử dụng React + Vite cho frontend, Node.js + Express cho backend và Gemini API để dịch văn bản.
+Ứng dụng web dịch thuật đa ngôn ngữ tích hợp AI **chạy hoàn toàn cục bộ**: văn bản, giọng nói, hình ảnh (OCR) và tài liệu DOCX/PDF. Các mô hình ngôn ngữ chạy qua [Ollama](https://ollama.com) trên máy của bạn, không cần API key và không gửi dữ liệu lên dịch vụ đám mây.
 
-Frontend nằm trong `client/`. Backend nằm trực tiếp ở thư mục gốc, với mã nguồn trong `src/`. Toàn bộ dự án được quản lý trong cùng một repository.
+> Đồ án chuyên ngành – Đại học Công nghiệp Hà Nội. Nhóm 14, GVHD: Nguyễn Ngọc Khải.
 
-## 1. Phạm vi hiện tại
+## Mục lục
 
-- Nhập văn bản và chọn ngôn ngữ nguồn/đích.
-- Tự động phát hiện ngôn ngữ nguồn bằng Gemini.
-- Dịch văn bản, hiển thị và sao chép kết quả.
-- Xử lý lỗi API và trạng thái đang dịch.
+- [Tính năng](#tính-năng)
+- [Ảnh giao diện](#ảnh-giao-diện)
+- [Công nghệ](#công-nghệ)
+- [Kiến trúc](#kiến-trúc)
+- [Yêu cầu môi trường](#yêu-cầu-môi-trường)
+- [Cài đặt và chạy](#cài-đặt-và-chạy)
+- [Cấu hình biến môi trường](#cấu-hình-biến-môi-trường)
+- [Tiện ích Chrome](#tiện-ích-chrome)
+- [Cấu trúc thư mục](#cấu-trúc-thư-mục)
+- [API](#api)
+- [Giới hạn đã biết](#giới-hạn-đã-biết)
+- [Xử lý sự cố](#xử-lý-sự-cố)
+- [Giấy phép](#giấy-phép)
 
+## Tính năng
 
-MongoDB, lịch sử dịch, OCR, giọng nói và dịch tài liệu PDF/DOCX chưa thuộc phần cài đặt hiện tại. Thành viên chưa cần cài database để chạy chức năng dịch văn bản.
-
-## 2. Yêu cầu môi trường
-
-| Công cụ | Yêu cầu của dự án |
+| Chức năng | Mô tả |
 | --- | --- |
-| Node.js | Dùng Node.js 24 LTS để thống nhất môi trường nhóm |
-| npm | Đi kèm Node.js |
-| Git | Clone repository và quản lý phiên bản |
-| Trình soạn thảo | VS Code hoặc công cụ tương đương |
-| Gemini API key | Key hợp lệ, model được hỗ trợ và còn quota |
-| Internet | Cần khi cài dependencies và gọi Gemini |
+| Dịch văn bản | Tự động dịch sau 1,5 giây ngừng gõ; tối đa 5.000 ký tự; hỗ trợ tự phát hiện ngôn ngữ nguồn |
+| Dịch giọng nói | Nhập bằng micro và đọc bản dịch (Web Speech API của trình duyệt) |
+| Dịch hình ảnh | Chọn, kéo thả hoặc dán ảnh (Ctrl + V); OCR bằng Tesseract.js (tiếng Việt, tiếng Anh) rồi dịch |
+| Dịch tài liệu | Tải lên DOCX/PDF, dịch và tải về bản dịch giữ bố cục |
+| AI giải thích | Hỏi đáp về bản dịch, phản hồi theo luồng (streaming) |
+| Lịch sử dịch | Xem, chỉnh sửa, khôi phục bản gốc, xóa; tự dọn tài liệu và ảnh quá 7 ngày |
+| Tiện ích Chrome | Bôi đen văn bản trên trang web, chọn "Dịch với LingoAI" để dịch và hỏi AI ở Side Panel |
 
-Công cụ tải về: [Node.js](https://nodejs.org/), [Git](https://git-scm.com/downloads), [VS Code](https://code.visualstudio.com/), [Google AI Studio](https://aistudio.google.com/).
+Ngôn ngữ hỗ trợ (8): Tiếng Việt, Tiếng Anh, Tiếng Nhật, Tiếng Hàn, Tiếng Trung giản thể, Tiếng Pháp, Tiếng Đức, Tiếng Tây Ban Nha.
 
-Kiểm tra trong terminal:
+## Ảnh giao diện
 
-```powershell
-node -v
-npm -v
-git --version
+> Đặt ảnh chụp màn hình vào thư mục `docs/screenshots/` với đúng tên file bên dưới (hoặc đổi đường dẫn cho khớp).
+
+### Dịch văn bản
+
+![Dịch văn bản](docs/screenshots/text-translate.png)
+
+*Trang "Dịch văn bản": tự động dịch sau khi ngừng gõ, hiển thị ngôn ngữ nguồn được phát hiện.*
+
+### Dịch giọng nói
+
+![Dịch giọng nói](docs/screenshots/voice.png)
+
+*Nút "Nói" ở trạng thái đang nghe và văn bản được điền vào ô nhập.*
+
+### Dịch hình ảnh
+
+![Dịch hình ảnh](docs/screenshots/image-translate.png)
+
+*Vùng kéo thả / dán ảnh, ảnh xem trước bên trái và bản dịch bên phải.*
+
+### Dịch tài liệu
+
+![Dịch tài liệu](docs/screenshots/document-translate.png)
+
+*Tải lên DOCX/PDF, thanh tiến độ và nút tải bản dịch.*
+
+### AI giải thích
+
+![AI giải thích](docs/screenshots/ai-explain.png)
+
+*Bảng "AI giải thích" trả lời theo luồng về đoạn được bôi đen.*
+
+### Lịch sử dịch
+
+![Lịch sử dịch](docs/screenshots/history.png)
+
+*Danh sách lịch sử, chỉnh sửa bản dịch và khôi phục bản gốc của AI.*
+
+### Tiện ích Chrome
+
+![Tiện ích Chrome](docs/screenshots/extension.png)
+
+*Side Panel của tiện ích sau khi bôi đen văn bản và chọn "Dịch với LingoAI".*
+
+## Công nghệ
+
+**Frontend** (`client/`): React 19, Vite, React Router 7, Tailwind CSS 4, Radix Slot, lucide-react.
+
+**Backend** (thư mục gốc, mã nguồn trong `src/`): Node.js (ES Modules), Express 5, Mongoose/MongoDB, Multer (lưu file trong bộ nhớ), Tesseract.js, mammoth, cheerio, pdfjs-dist, JSZip, @xmldom/xmldom, Puppeteer, node-cron.
+
+**Mô hình AI** (chạy qua Ollama, gọi `POST /api/chat`):
+
+| Vai trò | Biến môi trường | Mô hình |
+| --- | --- | --- |
+| Dịch văn bản và tài liệu | `OLLAMA_TRANSLATION_MODEL` | `translategemma:4b` |
+| Nhận diện ngôn ngữ nguồn | `OLLAMA_DETECTION_MODEL` | `qwen3:4b` |
+| AI giải thích (chat) | `OLLAMA_CHAT_MODEL` | `qwen3:4b-instruct` |
+
+## Kiến trúc
+
+```
+Trình duyệt (React, :5173)  ──/api (Vite proxy)──▶  Express (:5001)  ──▶  Ollama (:11434)
+Tiện ích Chrome (Side Panel) ───────────────────────▶       │
+                                                            └──▶  MongoDB (TranslationHistory)
 ```
 
-Các lệnh dưới đây dùng PowerShell trên Windows. Mở lại terminal sau khi cài Node.js hoặc Git để cập nhật PATH.
+- Frontend gọi `/api/...`; khi phát triển, Vite chuyển tiếp sang backend (mặc định `http://127.0.0.1:5001`, đổi bằng `BACKEND_URL`).
+- Backend kiểm tra dữ liệu, gọi Ollama, lưu lịch sử vào MongoDB và tự dọn dữ liệu cũ lúc 00:00 mỗi ngày.
+- Chỉ có một collection `TranslationHistory`; ứng dụng chưa có tài khoản người dùng.
 
-## 3. Cài đặt lần đầu
+## Yêu cầu môi trường
 
-### Bước 1: Clone repository
+- [Node.js](https://nodejs.org/) bản LTS mới và npm
+- [MongoDB](https://www.mongodb.com/docs/manual/installation/) đang chạy
+- [Ollama](https://ollama.com/download) đã cài đặt; máy cần đủ bộ nhớ cho các mô hình 4B tham số
+- Trình duyệt Chrome hoặc Edge (cho giọng nói và tiện ích; tiện ích cần Chrome 124 trở lên)
 
-Thay `URL_REPOSITORY_CUA_NHOM` bằng đường dẫn repository do nhóm cung cấp:
+## Cài đặt và chạy
 
-```powershell
-git clone URL_REPOSITORY_CUA_NHOM ai-translator
-cd ai-translator
-```
+1. **Tải mô hình:**
 
-Nếu đã có source code, chỉ cần mở terminal tại thư mục gốc chứa `package.json` và `client/`.
+   ```bash
+   ollama pull translategemma:4b
+   ollama pull qwen3:4b
+   ollama pull qwen3:4b-instruct
+   ```
 
-Không chạy lại `npm init` hoặc `npm create vite` khi clone dự án đã có sẵn.
+2. **Cài thư viện** (backend ở thư mục gốc, frontend trong `client/`):
 
-### Bước 2: Cài dependencies
+   ```bash
+   npm install
+   npm install --prefix client
+   ```
 
-Dự án có hai bộ dependencies: backend ở gốc và frontend trong `client/`.
+3. **Tạo file `.env`** ở thư mục gốc từ `.env.example` và điền giá trị (xem [bên dưới](#cấu-hình-biến-môi-trường)). Tối thiểu:
 
-Nếu repository đã có `package-lock.json` ở cả hai vị trí:
+   ```env
+   PORT=5001
+   MONGODB_URI=mongodb://127.0.0.1:27017/ai-translate
+   OLLAMA_BASE_URL=http://127.0.0.1:11434
+   OLLAMA_CHAT_MODEL=qwen3:4b-instruct
+   OLLAMA_TRANSLATION_MODEL=translategemma:4b
+   OLLAMA_DETECTION_MODEL=qwen3:4b
+   ```
 
-```powershell
-npm ci
-npm ci --prefix client
-```
+4. **Chạy cả backend và frontend:**
 
-Nếu chưa có lockfile tại vị trí tương ứng, dùng `npm install` cho vị trí đó:
+   ```bash
+   npm run dev
+   ```
 
-```powershell
-npm install
-npm install --prefix client
-```
+5. **Kiểm tra:** mở <http://localhost:5173> để dùng ứng dụng, và <http://localhost:5001/api/health> để kiểm tra backend.
 
-Không cần chạy cả hai cách. Ưu tiên `npm ci` khi có lockfile để dùng đúng phiên bản mà nhóm đã chốt. Nếu lockfile không khớp `package.json`, người cập nhật dependencies cần sửa và commit cả hai file.
+### Các lệnh npm (chạy ở thư mục gốc)
 
-Service Gemini hiện sử dụng `fetch` có sẵn trong Node.js; không cần cài thêm SDK Google để chạy service này. Luôn cài dependencies theo các file `package.json` trong repository.
-
-### Bước 3: Tạo cấu hình backend
-
-Tại thư mục gốc, nếu chưa có `.env`:
-
-```powershell
-Copy-Item .env.example .env
-```
-
-Không ghi đè `.env` đang chứa cấu hình riêng của bạn.
-
-Nội dung cấu hình:
-
-```env
-PORT=5001
-GEMINI_API_KEY=THAY_BANG_API_KEY_CUA_BAN
-GEMINI_MODEL=gemini-3.5-flash-lite
-```
-
-| Biến | Ý nghĩa |
+| Lệnh | Chức năng |
 | --- | --- |
-| `PORT` | Cổng backend; mặc định của nhóm là `5001` |
-| `GEMINI_API_KEY` | API key lấy từ Google AI Studio |
-| `GEMINI_MODEL` | Tên model dùng cho dịch văn bản, không thêm tiền tố `models/` |
-
-`gemini-3.5-flash-lite` là model đã chạy thành công trong quá trình thiết lập dự án. Khả năng truy cập và quota có thể khác theo tài khoản; kiểm tra lại trên AI Studio khi gặp lỗi.
-
-Key chỉ nằm trong `.env` ở gốc. Không đưa key vào `client/`, biến `VITE_*`, Git hoặc ảnh chụp log. Không dùng OpenAI key cho Gemini.
-
-Nếu repository thiếu `.env.example`, người phụ trách cần bổ sung file mẫu sau và commit:
-
-```env
-PORT=5001
-GEMINI_API_KEY=
-GEMINI_MODEL=gemini-3.5-flash-lite
-```
-
-## 4. Chạy dự án
-
-Tại thư mục gốc:
-
-```powershell
-npm run dev
-```
-
-Lệnh này chạy đồng thời frontend và backend. Không chạy thêm phiên Vite hoặc backend trùng cổng.
-
-| Thành phần | Địa chỉ |
-| --- | --- |
-| Frontend | http://localhost:5173 |
-| Kiểm tra backend | http://localhost:5001/api/health |
-
-Dừng ứng dụng bằng `Ctrl + C`. Sau khi sửa `.env`, cần dừng và chạy lại để backend nạp cấu hình mới.
-
-Nếu muốn chạy riêng để kiểm tra lỗi, dùng hai terminal tại thư mục gốc, sau khi đã dừng lệnh chạy chung:
-
-```powershell
-# Terminal 1
-npm run dev:server
-```
-
-```powershell
-# Terminal 2
-npm run dev:client
-```
-
-### Scripts chuẩn của nhóm
-
-Đây là phần `scripts` trong `package.json` ở gốc, không phải toàn bộ file:
-
-```json
-{
-  "dev": "concurrently --kill-others \"npm run dev:server\" \"npm run dev:client\"",
-  "dev:server": "node --watch --env-file=.env src/server.js",
-  "dev:client": "npm run dev --prefix client",
-  "start": "node --env-file=.env src/server.js",
-  "build": "npm run build --prefix client"
-}
-```
-
-Backend sử dụng `"type": "module"` trong `package.json`. Trong `client/package.json`, lệnh `dev` là `vite`; chỉ file ở gốc sử dụng `concurrently`.
-
-| Lệnh ở thư mục gốc | Chức năng |
-| --- | --- |
-| `npm run dev` | Chạy cả frontend và backend khi phát triển |
-| `npm run dev:server` | Chạy backend và tự khởi động lại khi code thay đổi |
-| `npm run dev:client` | Chạy Vite frontend |
+| `npm run dev` | Chạy đồng thời backend và frontend |
+| `npm run dev:server` | Chỉ chạy backend (`node --watch --env-file=.env src/server.js`) |
+| `npm run dev:client` | Chỉ chạy frontend (Vite, cổng 5173) |
+| `npm start` | Chạy backend, không theo dõi thay đổi |
 | `npm run build` | Build frontend vào `client/dist/` |
-| `npm start` | Chạy riêng backend, không bật chế độ watch |
 
-`npm start` chưa phục vụ giao diện React. Build thành công cũng không đồng nghĩa đã triển khai website. Cấu hình production/deploy sẽ được thực hiện riêng.
+## Cấu hình biến môi trường
 
-## 5. Tổ chức thư mục và file
+| Biến | Ý nghĩa | Mặc định |
+| --- | --- | --- |
+| `PORT` | Cổng backend | `5001` |
+| `MONGODB_URI` | Chuỗi kết nối MongoDB | (không có) |
+| `OLLAMA_BASE_URL` | Địa chỉ Ollama | `http://127.0.0.1:11434` |
+| `OLLAMA_TRANSLATION_MODEL` | Mô hình dịch | `translategemma:4b` |
+| `OLLAMA_DETECTION_MODEL` | Mô hình nhận diện ngôn ngữ | `qwen3:4b` |
+| `OLLAMA_CHAT_MODEL` | Mô hình AI giải thích | `qwen3:4b-instruct` |
+| `OLLAMA_DOCUMENT_MODEL` | Mô hình dịch tài liệu (không bắt buộc; chưa có trong `.env.example`) | `OLLAMA_MODEL`, nếu không có thì `qwen3:4b` |
+| `OLLAMA_TRANSLATION_TIMEOUT_MS` | Thời gian chờ tối đa mỗi lần gọi Ollama | `120000` |
+| `OLLAMA_DEBUG` | Bật ghi log chi tiết khi gọi Ollama | tắt |
+| `OLLAMA_CHAT_DISABLE_THINKING` | Tắt chế độ suy luận của mô hình chat | tắt |
+| `PDF_BROWSER_PATH` | Đường dẫn Chromium/Chrome cho Puppeteer khi xuất PDF | (dùng Chromium của Puppeteer) |
+| `BACKEND_URL` | Địa chỉ backend cho proxy của Vite (đọc từ `.env` trong `client/`) | `http://127.0.0.1:5001` |
 
-| Đường dẫn tính từ thư mục gốc | Trách nhiệm |
+## Tiện ích Chrome
+
+1. Mở `chrome://extensions` và bật **Chế độ nhà phát triển**.
+2. Chọn **Tải tiện ích đã giải nén** và trỏ tới thư mục `extension/`.
+3. Chạy backend, bôi đen văn bản trên một trang web, bấm chuột phải và chọn **Dịch với LingoAI**.
+
+Tiện ích (Manifest V3) chỉ kết nối tới `localhost` / `127.0.0.1`, nên backend phải đang chạy trên máy của bạn.
+
+## Cấu trúc thư mục
+
+```
+.
+├── package.json            # script và thư viện backend
+├── .env.example            # mẫu biến môi trường
+├── eng.traineddata         # dữ liệu ngôn ngữ cho Tesseract OCR
+├── vie.traineddata
+├── src/                    # backend
+│   ├── server.js           # điểm khởi động
+│   ├── app.js              # cấu hình Express, route
+│   ├── config/             # kết nối DB, cron dọn dữ liệu
+│   ├── models/             # TranslationHistory
+│   ├── routes/             # translation, ocr, document, explanation, history
+│   ├── controllers/
+│   ├── middlewares/
+│   ├── services/           # llm, document, pdf, docx, explanation
+│   └── uploads/            # file gốc của ảnh/tài liệu đã dịch
+├── client/                 # frontend React + Vite
+│   └── src/                # pages, components, hooks, services, constants
+└── extension/              # tiện ích Chrome (Manifest V3)
+```
+
+## API
+
+Tất cả endpoint nằm dưới `/api`.
+
+| Phương thức | Đường dẫn | Chức năng |
+| --- | --- | --- |
+| GET | `/api/health` | Kiểm tra backend |
+| POST | `/api/translations` | Dịch văn bản (JSON: `text`, `sourceLanguage`, `targetLanguage`) |
+| POST | `/api/ocr` | OCR ảnh (multipart, trường `image`) |
+| POST | `/api/translations/document` | Dịch tài liệu DOCX/PDF (multipart, trường `file`) |
+| GET | `/api/translations/document/:id/download` | Tải bản dịch (DOCX hoặc PDF) |
+| POST | `/api/explanations/chat` | Hỏi AI giải thích, phản hồi NDJSON theo luồng |
+| GET | `/api/history` | Danh sách lịch sử, mới nhất trước |
+| PATCH | `/api/history/:id/content` | Lưu bản dịch đã chỉnh sửa (kèm `revision`) |
+| POST | `/api/history/:id/restore` | Khôi phục bản dịch gốc của AI |
+| DELETE | `/api/history/:id`, `/api/history` | Xóa một bản ghi / toàn bộ lịch sử |
+
+Lỗi trả về dạng JSON với thông báo tiếng Việt; một số mã thường gặp: 400 (dữ liệu không hợp lệ), 409 (xung đột phiên bản khi sửa lịch sử), 413 (vượt giới hạn), 422 (không xử lý được tệp), 429 (AI đang bận), 503 (không kết nối được Ollama hoặc chưa tải mô hình), 504 (quá thời gian chờ).
+
+## Giới hạn đã biết
+
+| Mục | Giới hạn |
 | --- | --- |
-| `client/src/components/LanguageSelect.jsx` | Component chọn ngôn ngữ |
-| `client/src/constants/languages.js` | Danh sách ngôn ngữ và giới hạn văn bản |
-| `client/src/pages/TranslatorPage.jsx` | Trang dịch, state, debounce và hiển thị kết quả |
-| `client/src/services/translationApi.js` | Gọi backend qua HTTP |
-| `client/src/App.jsx` | Component gốc của ứng dụng |
-| `client/src/main.jsx` | Điểm khởi động React |
-| `client/src/index.css` | CSS giao diện |
-| `client/vite.config.js` | Cấu hình Vite và proxy `/api` |
-| `client/package.json` | Dependencies và scripts frontend |
-| `src/routes/translationRoutes.js` | Khai báo route dịch |
-| `src/controllers/translationController.js` | Kiểm tra đầu vào, gọi service và trả response |
-| `src/services/llmService.js` | Gọi Gemini, đọc kết quả và xử lý lỗi service |
-| `src/app.js` | Cấu hình Express, middleware và routes |
-| `src/server.js` | Khởi động backend |
-| `src/config/`, `src/models/`, `src/middlewares/` | Các folder dự kiến dùng khi mở rộng; có thể đang trống |
-| `.env` | Cấu hình riêng của từng thành viên, không commit |
-| `.env.example` | Mẫu biến môi trường, được commit |
-| `package.json` | Dependencies backend và scripts chạy chung |
-| `package-lock.json`, `client/package-lock.json` | Khóa phiên bản dependencies, được commit |
+| Văn bản | Tối đa 5.000 ký tự mỗi lần dịch |
+| Ảnh | `.jpg`, `.jpeg`, `.png`, `.webp`, tối đa 5 MB; OCR chỉ nạp tiếng Việt và tiếng Anh |
+| Tài liệu | `.docx` hoặc `.pdf`, tối đa 20 MB, 20.000 ký tự, 200 đoạn; PDF dạng ảnh quét chưa hỗ trợ |
+| AI giải thích | Một lượt hỏi tại một thời điểm; trả lỗi 429 khi đang bận |
+| Xác thực | Chưa có tài khoản; lịch sử dùng chung cho toàn hệ thống |
+| Kiểm thử | Chưa có bộ kiểm thử tự động đi kèm (`npm test` chưa được cấu hình) |
 
-Git không lưu folder trống nên thành viên clone về có thể chưa thấy các folder dự kiến.
+Bản PDF xuất ra được dựng lại từ HTML nên có thể khác bố cục và phông chữ của file gốc.
 
-## 6. Kết nối frontend và backend
+## Xử lý sự cố
 
-Frontend gọi đường dẫn tương đối `/api/translations`. Trong môi trường phát triển, Vite chuyển request `/api` tới backend.
-
-Cấu hình tương ứng trong `client/vite.config.js`:
-
-```javascript
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
-
-export default defineConfig({
-  plugins: [react()],
-  server: {
-    port: 5173,
-    strictPort: true,
-    proxy: {
-      "/api": {
-        target: "http://localhost:5001",
-        changeOrigin: true,
-      },
-    },
-  },
-});
-```
-
-Nếu đổi `PORT` trong `.env`, cập nhật cả `proxy.target` rồi khởi động lại. Proxy này dành cho Vite dev server.
-
-## 7. API hiện tại
-
-### GET `/api/health`
-
-Kiểm tra Express đang hoạt động. Response dự kiến:
-
-```json
-{
-  "success": true,
-  "message": "Backend AI Translator đang hoạt động."
-}
-```
-
-Health API thành công chưa xác nhận Gemini key hoặc quota hợp lệ.
-
-### POST `/api/translations`
-
-Header: `Content-Type: application/json`.
-
-Body mẫu:
-
-```json
-{
-  "text": "Hello",
-  "sourceLanguage": "auto",
-  "targetLanguage": "vi"
-}
-```
-
-Quy ước:
-
-- Mã ngôn ngữ hiện tại: `vi`, `en`, `ja`, `ko`, `zh`, `fr`, `de`, `es`.
-- `auto` chỉ dùng cho ngôn ngữ nguồn.
-- Văn bản không được rỗng và tối đa 5.000 ký tự theo cách đếm `String.length` trong JavaScript.
-- API hiện từ chối nguồn và đích giống nhau. Giao diện tự động dịch có thể trả lại nguyên văn tại frontend cho trường hợp này để tránh gọi API.
-
-Response thành công minh họa; cách diễn đạt bản dịch có thể khác:
-
-```json
-{
-  "success": true,
-  "message": "Dịch thành công.",
-  "data": {
-    "originalText": "Hello",
-    "sourceLanguage": "auto",
-    "targetLanguage": "vi",
-    "translatedText": "Xin chào",
-    "detectedLanguage": "en"
-  }
-}
-```
-
-## 8. Kiểm tra sau khi cài đặt
-
-1. Chạy `npm run dev` và mở health API.
-2. Mở frontend, nhập `Hello`, chọn nguồn tiếng Anh và đích tiếng Việt.
-3. Chờ debounce nếu branch đã có tự động dịch; nếu chưa, nhấn Dịch.
-4. Kiểm tra bản dịch, thử nguồn tự động và nút Sao chép.
-5. Xóa nội dung: kết quả cũ phải được xóa trong phiên bản tự động dịch.
-6. Thử đổi ngôn ngữ hoặc nhập tiếp trong lúc chờ: kết quả cũ không được ghi đè kết quả mới.
-7. Chạy `npm run build` ở terminal khác để kiểm tra frontend build được.
-
-Kiểm tra riêng API bằng PowerShell:
-
-```powershell
-$body = @{
-  text = "Hello"
-  sourceLanguage = "en"
-  targetLanguage = "vi"
-} | ConvertTo-Json
-
-Invoke-RestMethod `
-  -Uri "http://localhost:5001/api/translations" `
-  -Method Post `
-  -ContentType "application/json" `
-  -Body $body
-```
-
-Lệnh này gọi Gemini thật và sử dụng quota. Việc hủy request ở frontend không bảo đảm hủy lượt xử lý Gemini đã bắt đầu ở backend. Tránh thử liên tục; có thể thống nhất tăng debounce lên 1.200–1.500 ms nếu cần giảm số lượt gọi.
-
-## 9. Lỗi thường gặp
-
-| Hiện tượng | Kiểm tra và xử lý |
+| Triệu chứng | Cách xử lý |
 | --- | --- |
-| `Port 5173 is already in use` | Dừng phiên Vite cũ bằng `Ctrl + C`; chỉ chạy một phiên dự án |
-| Backend báo `EADDRINUSE` | Cổng 5001 đang bị chiếm; dừng phiên cũ hoặc đổi cả PORT và proxy |
-| Log lồng nhiều lớp `[0] [1]` | Kiểm tra scripts; `dev:server` phải chạy Node trực tiếp, không gọi lại `npm run dev` ở gốc |
-| `Missing script` | Kiểm tra đúng thư mục và scripts trong đúng `package.json` |
-| Không tìm thấy `.env` | File phải nằm ở gốc; kiểm tra Windows không lưu thành `.env.txt` |
-| PowerShell chặn `npm.ps1` | Có thể dùng `npm.cmd` thay cho `npm` trong terminal |
-| Health chạy nhưng frontend không gọi được API | Kiểm tra Vite proxy và cổng backend; khởi động lại Vite sau khi sửa cấu hình |
-| `MISSING_API_KEY` / `INVALID_API_KEY` | Kiểm tra GEMINI_API_KEY ở backend; không dùng key OpenAI |
-| `404 NOT_FOUND` | Đọc `googleMessage`, kiểm tra tên model, endpoint và quyền truy cập; model xuất hiện trong danh sách chưa bảo đảm dùng được cho tài khoản mới |
-| Model 2.5 báo không còn dành cho người dùng mới | Trong quá trình thiết lập, API đã yêu cầu đổi sang `gemini-3.5-flash-lite`, sau đó dự án dịch thành công |
-| `429` | Kiểm tra quota/rate limit và billing của project Gemini; Free Tier không có nghĩa không giới hạn |
-| `503 UNAVAILABLE` | Có thể là gián đoạn hoặc quá tải dịch vụ; thử lại có giới hạn, không gửi dồn request |
-| `504 AI_TIMEOUT` | Service tự ngắt vì hết thời gian chờ; thử câu ngắn và kiểm tra model/kết nối; không tăng timeout vô hạn |
-| `MAX_TOKENS`, kết quả trống hoặc JSON không hợp lệ | Thử văn bản ngắn hơn, kiểm tra cấu hình model và giới hạn đầu ra; không hiển thị bản dịch bị cắt |
+| Báo lỗi 503, "không tìm thấy mô hình" | Chạy `ollama list`, bảo đảm đã `ollama pull` đủ ba mô hình và tên khớp với `.env` |
+| Backend báo không kết nối được MongoDB | Kiểm tra MongoDB đang chạy và `MONGODB_URI` đúng; các chức năng lưu lịch sử sẽ báo lỗi nếu thiếu DB |
+| Lỗi 504 hoặc dịch rất chậm | Lần gọi đầu phải nạp mô hình vào bộ nhớ; tăng `OLLAMA_TRANSLATION_TIMEOUT_MS` nếu máy yếu |
+| Frontend không gọi được `/api` | Kiểm tra backend chạy ở cổng 5001 hoặc đặt `BACKEND_URL` đúng |
+| Xuất PDF lỗi | Đặt `PDF_BROWSER_PATH` trỏ tới Chrome/Chromium đã cài |
+| Nút "Nói" không hoạt động | Dùng Chrome hoặc Edge và cấp quyền micro cho trang |
 
-Khi báo lỗi cho nhóm, gửi: branch/commit, các bước tái hiện, tên model, mã lỗi, thông báo chi tiết đã che dữ liệu riêng tư và thời gian chờ. Không gửi API key, headers chứa key hoặc toàn bộ `.env`.
+## Giấy phép
 
-## 10. Quy trình làm việc nhóm đề xuất
-
-### Trước khi bắt đầu task
-
-Kiểm tra và commit hoặc stash thay đổi đang làm trước khi chuyển branch. Các lệnh dưới giả định nhánh chính là `main`; thay bằng tên thực tế nếu nhóm dùng tên khác.
-
-```powershell
-git status
-git switch main
-git pull --ff-only
-git switch -c feature/ten-chuc-nang
-```
-
-Nếu thay đổi từ nhóm cập nhật lockfile, chạy lại `npm ci` ở phần tương ứng. Nếu `.env.example` thay đổi, bổ sung biến mới vào `.env` cá nhân mà không ghi đè key.
-
-### Trước khi tạo Pull Request
-
-- Chạy thử chức năng đã thay đổi và luồng dịch cơ bản.
-- Chạy `npm run build`; nếu có script lint, chạy `npm run lint --prefix client`.
-- Xem `git diff` và `git status`, bảo đảm không có key, `.env`, `node_modules/` hoặc `dist/` bị đưa vào commit.
-- Commit những file liên quan đến task; cập nhật README nếu đổi cách cài/chạy.
-- Push branch và tạo Pull Request mô tả thay đổi, cách kiểm tra và lỗi còn biết.
-
-Ví dụ:
-
-```powershell
-git add client/src/pages/TranslatorPage.jsx
-git commit -m "feat: add automatic text translation"
-git push -u origin feature/ten-chuc-nang
-```
-
-Chỉ cài thêm package ở đúng phần: backend tại gốc, frontend trong `client/`. Commit cả `package.json` và lockfile tương ứng. Tránh tự nâng cấp hàng loạt dependencies khi đang xử lý task khác.
-
-### `.gitignore` tối thiểu
-
-```gitignore
-node_modules/
-dist/
-coverage/
-.env
-.env.*
-!.env.example
-*.log
-```
-
-Nếu `.env` từng được commit, thêm `.gitignore` không xóa key khỏi lịch sử: cần thu hồi key đã lộ và thông báo người phụ trách repository để xử lý.
-
-## 11. Tài liệu tham khảo
-
-- [Vite](https://vite.dev/guide/)
-- [Node.js](https://nodejs.org/docs/latest-v24.x/api/)
-- [Express](https://expressjs.com/)
-- [Gemini generateContent API](https://ai.google.dev/api/generate-content)
-- [Danh sách model Gemini](https://ai.google.dev/api/models)
-- [Giá và Free Tier Gemini](https://ai.google.dev/gemini-api/docs/pricing)
-
+ISC (theo `package.json`).

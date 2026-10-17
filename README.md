@@ -2,8 +2,6 @@
 
 Ứng dụng web dịch thuật đa ngôn ngữ tích hợp AI **chạy hoàn toàn cục bộ**: văn bản, giọng nói, hình ảnh (OCR) và tài liệu DOCX/PDF. Các mô hình ngôn ngữ chạy qua [Ollama](https://ollama.com) trên máy của bạn, không cần API key và không gửi dữ liệu lên dịch vụ đám mây.
 
-> Đồ án chuyên ngành – Đại học Công nghiệp Hà Nội. Nhóm 14, GVHD: Nguyễn Ngọc Khải.
-
 ## Mục lục
 
 - [Tính năng](#tính-năng)
@@ -36,19 +34,11 @@ Ngôn ngữ hỗ trợ (8): Tiếng Việt, Tiếng Anh, Tiếng Nhật, Tiếng
 
 ## Ảnh giao diện
 
-> Đặt ảnh chụp màn hình vào thư mục `docs/screenshots/` với đúng tên file bên dưới (hoặc đổi đường dẫn cho khớp).
-
 ### Dịch văn bản
 
 ![Dịch văn bản](docs/screenshots/text-translate.png)
 
 *Trang "Dịch văn bản": tự động dịch sau khi ngừng gõ, hiển thị ngôn ngữ nguồn được phát hiện.*
-
-### Dịch giọng nói
-
-![Dịch giọng nói](docs/screenshots/voice.png)
-
-*Nút "Nói" ở trạng thái đang nghe và văn bản được điền vào ô nhập.*
 
 ### Dịch hình ảnh
 

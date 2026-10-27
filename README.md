@@ -2,6 +2,8 @@
 
 Ứng dụng web dịch thuật đa ngôn ngữ tích hợp AI **chạy hoàn toàn cục bộ**: văn bản, giọng nói, hình ảnh (OCR) và tài liệu DOCX/PDF. Các mô hình ngôn ngữ chạy qua [Ollama](https://ollama.com) trên máy của bạn, không cần API key và không gửi dữ liệu lên dịch vụ đám mây.
 
+> Đồ án chuyên ngành – Đại học Công nghiệp Hà Nội. Nhóm 14, GVHD: Nguyễn Ngọc Khải.
+
 ## Mục lục
 
 - [Tính năng](#tính-năng)
@@ -34,11 +36,19 @@ Ngôn ngữ hỗ trợ (8): Tiếng Việt, Tiếng Anh, Tiếng Nhật, Tiếng
 
 ## Ảnh giao diện
 
+> Đặt ảnh chụp màn hình vào thư mục `docs/screenshots/` với đúng tên file bên dưới (hoặc đổi đường dẫn cho khớp).
+
 ### Dịch văn bản
 
 ![Dịch văn bản](docs/screenshots/text-translate.png)
 
 *Trang "Dịch văn bản": tự động dịch sau khi ngừng gõ, hiển thị ngôn ngữ nguồn được phát hiện.*
+
+### Dịch giọng nói
+
+![Dịch giọng nói](docs/screenshots/voice.png)
+
+*Nút "Nói" ở trạng thái đang nghe và văn bản được điền vào ô nhập.*
 
 ### Dịch hình ảnh
 
@@ -104,6 +114,55 @@ Tiện ích Chrome (Side Panel) ────────────────
 - Trình duyệt Chrome hoặc Edge (cho giọng nói và tiện ích; tiện ích cần Chrome 124 trở lên)
 
 ## Cài đặt và chạy
+
+### Cách 1: Cài đặt tự động trên Windows (khuyên dùng)
+
+Script `setup.ps1` ở thư mục gốc tự kiểm tra và cài những thứ còn thiếu, nên bạn không phải cài từng thứ bằng tay.
+
+**Yêu cầu:** Windows 10/11 có [winget](https://learn.microsoft.com/windows/package-manager/winget/) (đi kèm "App Installer" của Microsoft Store) và kết nối Internet.
+
+Mở PowerShell tại thư mục gốc của dự án (nơi có `package.json`) và chạy:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\setup.ps1
+```
+
+Script thực hiện lần lượt:
+
+1. Kiểm tra Windows, winget và vị trí của script.
+2. Cài **Node.js LTS** nếu chưa có hoặc bản thấp hơn 20.6 (cần cho `node --env-file`).
+3. Cài **MongoDB Community Server** và bật dịch vụ `MongoDB` (cần quyền Administrator; script tự mở lại với quyền này khi cần).
+4. Cài **Ollama** và khởi động nếu chưa chạy ở cổng 11434.
+5. Chạy `npm install` cho backend và `npm install --prefix client` cho frontend (Puppeteer tự tải Chromium ở bước này).
+6. Tạo file `.env` với các biến cần thiết nếu chưa có (không ghi đè file cũ).
+7. Tải ba mô hình `translategemma:4b`, `qwen3:4b`, `qwen3:4b-instruct` (bỏ qua mô hình đã có).
+
+Các tùy chọn:
+
+| Tham số | Tác dụng |
+| --- | --- |
+| `-Run` | Chạy `npm run dev` ngay sau khi cài xong |
+| `-SkipModels` | Bỏ qua bước tải mô hình Ollama (dùng khi đã có mô hình hoặc mạng chậm) |
+| `-MongoUri "<chuỗi kết nối>"` | Dùng MongoDB có sẵn hoặc MongoDB Atlas, script sẽ không cài MongoDB local |
+
+Ví dụ:
+
+```powershell
+# Cài xong chạy luôn
+powershell -ExecutionPolicy Bypass -File .\setup.ps1 -Run
+
+# Dùng MongoDB Atlas, không cài MongoDB local
+powershell -ExecutionPolicy Bypass -File .\setup.ps1 -MongoUri "mongodb+srv://USER:PASSWORD@CLUSTER/ai-translate"
+```
+
+Lưu ý:
+
+- Ba mô hình nặng khoảng 8–10 GB nên bước tải có thể mất nhiều phút.
+- Script có thể chạy lại nhiều lần; những thứ đã cài sẽ được bỏ qua.
+- Nếu sau khi cài, terminal chưa nhận lệnh `node` hoặc `ollama`, hãy mở terminal mới rồi chạy lại script.
+- Script chỉ dành cho Windows. Trên Linux/macOS hãy dùng cách thủ công bên dưới.
+
+### Cách 2: Cài đặt thủ công
 
 1. **Tải mô hình:**
 
@@ -180,6 +239,7 @@ Tiện ích (Manifest V3) chỉ kết nối tới `localhost` / `127.0.0.1`, nê
 .
 ├── package.json            # script và thư viện backend
 ├── .env.example            # mẫu biến môi trường
+├── setup.ps1               # script cài đặt tự động (Windows)
 ├── eng.traineddata         # dữ liệu ngôn ngữ cho Tesseract OCR
 ├── vie.traineddata
 ├── src/                    # backend
@@ -236,6 +296,7 @@ Bản PDF xuất ra được dựng lại từ HTML nên có thể khác bố c�
 | Báo lỗi 503, "không tìm thấy mô hình" | Chạy `ollama list`, bảo đảm đã `ollama pull` đủ ba mô hình và tên khớp với `.env` |
 | Backend báo không kết nối được MongoDB | Kiểm tra MongoDB đang chạy và `MONGODB_URI` đúng; các chức năng lưu lịch sử sẽ báo lỗi nếu thiếu DB |
 | Lỗi 504 hoặc dịch rất chậm | Lần gọi đầu phải nạp mô hình vào bộ nhớ; tăng `OLLAMA_TRANSLATION_TIMEOUT_MS` nếu máy yếu |
+| `setup.ps1` báo lỗi winget hoặc không nhận lệnh sau khi cài | Cập nhật "App Installer" trong Microsoft Store, mở terminal mới rồi chạy lại script |
 | Frontend không gọi được `/api` | Kiểm tra backend chạy ở cổng 5001 hoặc đặt `BACKEND_URL` đúng |
 | Xuất PDF lỗi | Đặt `PDF_BROWSER_PATH` trỏ tới Chrome/Chromium đã cài |
 | Nút "Nói" không hoạt động | Dùng Chrome hoặc Edge và cấp quyền micro cho trang |

@@ -2,7 +2,6 @@
 
 Ứng dụng web dịch thuật đa ngôn ngữ tích hợp AI **chạy hoàn toàn cục bộ**: văn bản, giọng nói, hình ảnh (OCR) và tài liệu DOCX/PDF. Các mô hình ngôn ngữ chạy qua [Ollama](https://ollama.com) trên máy của bạn, không cần API key và không gửi dữ liệu lên dịch vụ đám mây.
 
-> Đồ án chuyên ngành – Đại học Công nghiệp Hà Nội. Nhóm 14, GVHD: Nguyễn Ngọc Khải.
 
 ## Mục lục
 
